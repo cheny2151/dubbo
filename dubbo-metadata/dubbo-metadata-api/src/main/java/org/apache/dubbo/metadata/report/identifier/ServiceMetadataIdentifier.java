@@ -18,9 +18,6 @@ package org.apache.dubbo.metadata.report.identifier;
 
 import org.apache.dubbo.common.URL;
 
-import static org.apache.dubbo.common.constants.CommonConstants.GROUP_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.SIDE_KEY;
-import static org.apache.dubbo.common.constants.CommonConstants.VERSION_KEY;
 import static org.apache.dubbo.metadata.MetadataConstants.KEY_REVISON_PREFIX;
 
 /**
@@ -34,10 +31,10 @@ public class ServiceMetadataIdentifier extends BaseServiceMetadataIdentifier imp
     private String revision;
     private String protocol;
 
-    public ServiceMetadataIdentifier() {
-    }
+    public ServiceMetadataIdentifier() {}
 
-    public ServiceMetadataIdentifier(String serviceInterface, String version, String group, String side, String revision, String protocol) {
+    public ServiceMetadataIdentifier(
+            String serviceInterface, String version, String group, String side, String revision, String protocol) {
         this.serviceInterface = serviceInterface;
         this.version = version;
         this.group = group;
@@ -46,12 +43,11 @@ public class ServiceMetadataIdentifier extends BaseServiceMetadataIdentifier imp
         this.protocol = protocol;
     }
 
-
     public ServiceMetadataIdentifier(URL url) {
         this.serviceInterface = url.getServiceInterface();
-        this.version = url.getParameter(VERSION_KEY);
-        this.group = url.getParameter(GROUP_KEY);
-        this.side = url.getParameter(SIDE_KEY);
+        this.version = url.getVersion();
+        this.group = url.getGroup();
+        this.side = url.getSide();
         this.protocol = url.getProtocol();
     }
 
@@ -73,13 +69,13 @@ public class ServiceMetadataIdentifier extends BaseServiceMetadataIdentifier imp
 
     @Override
     public String toString() {
-        return "ServiceMetadataIdentifier{" +
-                "revision='" + revision + '\'' +
-                ", protocol='" + protocol + '\'' +
-                ", serviceInterface='" + serviceInterface + '\'' +
-                ", version='" + version + '\'' +
-                ", group='" + group + '\'' +
-                ", side='" + side + '\'' +
-                "} " + super.toString();
+        return "ServiceMetadataIdentifier{" + "revision='"
+                + revision + '\'' + ", protocol='"
+                + protocol + '\'' + ", serviceInterface='"
+                + serviceInterface + '\'' + ", version='"
+                + version + '\'' + ", group='"
+                + group + '\'' + ", side='"
+                + side + '\'' + "} "
+                + super.toString();
     }
 }

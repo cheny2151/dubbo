@@ -16,11 +16,11 @@
  */
 package org.apache.dubbo.common.lang;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+
+import org.junit.jupiter.api.Test;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.sort;
@@ -31,22 +31,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * @since 2.7.5
  */
-public class PrioritizedTest {
+class PrioritizedTest {
 
     @Test
-    public void testConstants() {
+    void testConstants() {
         assertEquals(Integer.MAX_VALUE, Prioritized.MIN_PRIORITY);
         assertEquals(Integer.MIN_VALUE, Prioritized.MAX_PRIORITY);
     }
 
     @Test
-    public void testGetPriority() {
-        assertEquals(Prioritized.NORMAL_PRIORITY, new Prioritized() {
-        }.getPriority());
+    void testGetPriority() {
+        assertEquals(Prioritized.NORMAL_PRIORITY, new Prioritized() {}.getPriority());
     }
 
     @Test
-    public void testComparator() {
+    void testComparator() {
 
         List<Object> list = new LinkedList<>();
 
@@ -85,7 +84,6 @@ public class PrioritizedTest {
         copy = asList(1, 2, 3);
 
         assertEquals(copy, list);
-
     }
 
     public static PrioritizedValue of(int value) {
@@ -100,6 +98,7 @@ public class PrioritizedTest {
             this.value = value;
         }
 
+        @Override
         public int getPriority() {
             return value;
         }

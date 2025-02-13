@@ -30,22 +30,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToDoubleConverterTest {
+class StringToDoubleConverterTest {
 
     private StringToDoubleConverter converter;
 
     @BeforeEach
     public void init() {
-        converter = (StringToDoubleConverter) getExtensionLoader(Converter.class).getExtension("string-to-double");
+        converter =
+                (StringToDoubleConverter) getExtensionLoader(Converter.class).getExtension("string-to-double");
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
         assertTrue(converter.accept(String.class, Double.class));
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
         assertEquals(Double.valueOf("1.0"), converter.convert("1.0"));
         assertNull(converter.convert(null));
         assertThrows(NumberFormatException.class, () -> {

@@ -29,22 +29,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToBooleanConverterTest {
+class StringToBooleanConverterTest {
 
     private StringToBooleanConverter converter;
 
     @BeforeEach
     public void init() {
-        converter = (StringToBooleanConverter) getExtensionLoader(Converter.class).getExtension("string-to-boolean");
+        converter =
+                (StringToBooleanConverter) getExtensionLoader(Converter.class).getExtension("string-to-boolean");
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
         assertTrue(converter.accept(String.class, Boolean.class));
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
         assertTrue(converter.convert("true"));
         assertTrue(converter.convert("true"));
         assertTrue(converter.convert("True"));

@@ -18,10 +18,12 @@ package org.apache.dubbo.rpc.protocol.dubbo.filter;
 
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.common.extension.Activate;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.ConcurrentHashSet;
+import org.apache.dubbo.common.utils.JsonUtils;
+import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.remoting.Channel;
 import org.apache.dubbo.remoting.Constants;
 import org.apache.dubbo.rpc.Filter;
@@ -30,8 +32,7 @@ import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.Result;
 import org.apache.dubbo.rpc.RpcContext;
 import org.apache.dubbo.rpc.RpcException;
-
-import com.alibaba.fastjson.JSON;
+import org.apache.dubbo.rpc.support.RpcUtils;
 
 import java.util.ArrayList;
 import java.util.Set;
@@ -39,13 +40,15 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.PROTOCOL_FAILED_PARSE;
+
 /**
  * TraceFilter
  */
 @Activate(group = CommonConstants.PROVIDER)
 public class TraceFilter implements Filter {
 
-    private static final Logger logger = LoggerFactory.getLogger(TraceFilter.class);
+    private static final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(TraceFilter.class);
 
     private static final String TRACE_MAX = "trace.max";
 
@@ -56,7 +59,7 @@ public class TraceFilter implements Filter {
     public static void addTracer(Class<?> type, String method, Channel channel, int max) {
         channel.setAttribute(TRACE_MAX, max);
         channel.setAttribute(TRACE_COUNT, new AtomicInteger());
-        String key = method != null && method.length() > 0 ? type.getName() + "." + method : type.getName();
+        String key = StringUtils.isNotEmpty(method) ? type.getName() + "." + method : type.getName();
         Set<Channel> channels = TRACERS.computeIfAbsent(key, k -> new ConcurrentHashSet<>());
         channels.add(channel);
     }
@@ -64,7 +67,7 @@ public class TraceFilter implements Filter {
     public static void removeTracer(Class<?> type, String method, Channel channel) {
         channel.removeAttribute(TRACE_MAX);
         channel.removeAttribute(TRACE_COUNT);
-        String key = method != null && method.length() > 0 ? type.getName() + "." + method : type.getName();
+        String key = StringUtils.isNotEmpty(method) ? type.getName() + "." + method : type.getName();
         Set<Channel> channels = TRACERS.get(key);
         if (channels != null) {
             channels.remove(channel);
@@ -77,9 +80,9 @@ public class TraceFilter implements Filter {
         Result result = invoker.invoke(invocation);
         long end = System.currentTimeMillis();
         if (TRACERS.size() > 0) {
-            String key = invoker.getInterface().getName() + "." + invocation.getMethodName();
+            String key = invoker.getInterface().getName() + "." + RpcUtils.getMethodName(invocation);
             Set<Channel> channels = TRACERS.get(key);
-            if (channels == null || channels.isEmpty()) {
+            if (CollectionUtils.isEmpty(channels)) {
                 key = invoker.getInterface().getName();
                 channels = TRACERS.get(key);
             }
@@ -92,7 +95,7 @@ public class TraceFilter implements Filter {
                             if (m != null) {
                                 max = m;
                             }
-                            int count = 0;
+                            int count;
                             AtomicInteger c = (AtomicInteger) channel.getAttribute(TRACE_COUNT);
                             if (c == null) {
                                 c = new AtomicInteger();
@@ -100,20 +103,23 @@ public class TraceFilter implements Filter {
                             }
                             count = c.getAndIncrement();
                             if (count < max) {
-                                String prompt = channel.getUrl().getParameter(Constants.PROMPT_KEY, Constants.DEFAULT_PROMPT);
-                                channel.send("\r\n" + RpcContext.getContext().getRemoteAddress() + " -> "
-                                        + invoker.getInterface().getName()
-                                        + "." + invocation.getMethodName()
-                                        + "(" + JSON.toJSONString(invocation.getArguments()) + ")" + " -> " + JSON.toJSONString(result.getValue())
-                                        + "\r\nelapsed: " + (end - start) + " ms."
-                                        + "\r\n\r\n" + prompt);
+                                String prompt =
+                                        channel.getUrl().getParameter(Constants.PROMPT_KEY, Constants.DEFAULT_PROMPT);
+                                channel.send(
+                                        "\r\n" + RpcContext.getServiceContext().getRemoteAddress() + " -> "
+                                                + invoker.getInterface().getName()
+                                                + "." + RpcUtils.getMethodName(invocation)
+                                                + "(" + JsonUtils.toJson(invocation.getArguments()) + ")" + " -> "
+                                                + JsonUtils.toJson(result.getValue())
+                                                + "\r\nelapsed: " + (end - start) + " ms."
+                                                + "\r\n\r\n" + prompt);
                             }
                             if (count >= max - 1) {
                                 channels.remove(channel);
                             }
                         } catch (Throwable e) {
                             channels.remove(channel);
-                            logger.warn(e.getMessage(), e);
+                            logger.warn(PROTOCOL_FAILED_PARSE, "", "", e.getMessage(), e);
                         }
                     } else {
                         channels.remove(channel);
@@ -123,5 +129,4 @@ public class TraceFilter implements Filter {
         }
         return result;
     }
-
 }

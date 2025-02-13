@@ -16,16 +16,23 @@
  */
 package org.apache.dubbo.common.utils;
 
+import java.lang.reflect.Field;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableSet;
@@ -34,37 +41,32 @@ import static java.util.Collections.unmodifiableSet;
  * Miscellaneous collection utility methods.
  * Mainly for internal use within the framework.
  *
- * @author william.liangf
  * @since 2.0.7
  */
 public class CollectionUtils {
 
-    private static final Comparator<String> SIMPLE_NAME_COMPARATOR = new Comparator<String>() {
-        @Override
-        public int compare(String s1, String s2) {
-            if (s1 == null && s2 == null) {
-                return 0;
-            }
-            if (s1 == null) {
-                return -1;
-            }
-            if (s2 == null) {
-                return 1;
-            }
-            int i1 = s1.lastIndexOf('.');
-            if (i1 >= 0) {
-                s1 = s1.substring(i1 + 1);
-            }
-            int i2 = s2.lastIndexOf('.');
-            if (i2 >= 0) {
-                s2 = s2.substring(i2 + 1);
-            }
-            return s1.compareToIgnoreCase(s2);
+    private static final Comparator<String> SIMPLE_NAME_COMPARATOR = (s1, s2) -> {
+        if (s1 == null && s2 == null) {
+            return 0;
         }
+        if (s1 == null) {
+            return -1;
+        }
+        if (s2 == null) {
+            return 1;
+        }
+        int i1 = s1.lastIndexOf('.');
+        if (i1 >= 0) {
+            s1 = s1.substring(i1 + 1);
+        }
+        int i2 = s2.lastIndexOf('.');
+        if (i2 >= 0) {
+            s2 = s2.substring(i2 + 1);
+        }
+        return s1.compareToIgnoreCase(s2);
     };
 
-    private CollectionUtils() {
-    }
+    private CollectionUtils() {}
 
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <T> List<T> sort(List<T> list) {
@@ -79,6 +81,26 @@ public class CollectionUtils {
             Collections.sort(list, SIMPLE_NAME_COMPARATOR);
         }
         return list;
+    }
+
+    /**
+     * Flip the specified {@link Map}
+     *
+     * @param map The specified {@link Map},Its value must be unique
+     * @param <K> The key type of specified {@link Map}
+     * @param <V> The value type of specified {@link Map}
+     * @return {@link Map}
+     */
+    @SuppressWarnings("unchecked")
+    public static <K, V> Map<V, K> flip(Map<K, V> map) {
+        if (isEmptyMap(map)) {
+            return (Map<V, K>) map;
+        }
+        Set<V> set = new HashSet<>(map.values());
+        if (set.size() != map.size()) {
+            throw new IllegalArgumentException("The map value must be unique.");
+        }
+        return map.entrySet().stream().collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
     }
 
     public static Map<String, Map<String, String>> splitAll(Map<String, List<String>> list, String separator) {
@@ -218,6 +240,22 @@ public class CollectionUtils {
         return ret;
     }
 
+    @SuppressWarnings("unchecked")
+    public static <K, V> Map<K, V> objToMap(Object object) throws IllegalAccessException {
+        Map<K, V> ret = new HashMap<>();
+        if (object != null) {
+            Field[] fields = object.getClass().getDeclaredFields();
+            for (Field field : fields) {
+                field.setAccessible(true);
+                Object value = field.get(object);
+                if (value != null) {
+                    ret.put((K) field.getName(), (V) value);
+                }
+            }
+        }
+        return ret;
+    }
+
     /**
      * Return {@code true} if the supplied Collection is {@code null} or empty.
      * Otherwise, return {@code false}.
@@ -248,7 +286,7 @@ public class CollectionUtils {
      * @return whether the given Map is empty
      */
     public static boolean isEmptyMap(Map map) {
-        return map == null || map.size() == 0;
+        return map == null || map.isEmpty();
     }
 
     /**
@@ -324,9 +362,7 @@ public class CollectionUtils {
 
         try {
             return one.containsAll(another);
-        } catch (ClassCastException unused) {
-            return false;
-        } catch (NullPointerException unused) {
+        } catch (ClassCastException | NullPointerException unused) {
             return false;
         }
     }
@@ -371,11 +407,100 @@ public class CollectionUtils {
             return null;
         }
         if (values instanceof List) {
-            List<T> list = (List<T>) values;
-            return list.get(0);
+            return ((List<T>) values).get(0);
         } else {
             return values.iterator().next();
         }
     }
 
+    public static <T> T first(List<T> values) {
+        if (isEmpty(values)) {
+            return null;
+        }
+        return values.get(0);
+    }
+
+    public static <T> Set<T> toTreeSet(Set<T> set) {
+        if (isEmpty(set)) {
+            return set;
+        }
+        if (!(set instanceof TreeSet)) {
+            set = new TreeSet<>(set);
+        }
+        return set;
+    }
+
+    public static <T> Set<T> newHashSet(int expectedSize) {
+        return new HashSet<>(capacity(expectedSize));
+    }
+
+    public static <T> Set<T> newLinkedHashSet(int expectedSize) {
+        return new LinkedHashSet<>(capacity(expectedSize));
+    }
+
+    public static <K, T> Map<K, T> newHashMap(int expectedSize) {
+        return new HashMap<>(capacity(expectedSize));
+    }
+
+    public static <K, T> Map<K, T> newLinkedHashMap(int expectedSize) {
+        return new LinkedHashMap<>(capacity(expectedSize));
+    }
+
+    public static <K, T> Map<K, T> newConcurrentHashMap(int expectedSize) {
+        if (JRE.JAVA_8.isCurrentVersion()) {
+            return new SafeConcurrentHashMap<>(capacity(expectedSize));
+        }
+        return new ConcurrentHashMap<>(capacity(expectedSize));
+    }
+
+    public static <K, T> Map<K, T> newConcurrentHashMap() {
+        if (JRE.JAVA_8.isCurrentVersion()) {
+            return new SafeConcurrentHashMap<>();
+        }
+        return new ConcurrentHashMap<>();
+    }
+
+    public static int capacity(int expectedSize) {
+        if (expectedSize < 3) {
+            if (expectedSize < 0) {
+                throw new IllegalArgumentException("expectedSize cannot be negative but was: " + expectedSize);
+            }
+            return expectedSize + 1;
+        }
+        if (expectedSize < 1 << (Integer.SIZE - 2)) {
+            return (int) (expectedSize / 0.75F + 1.0F);
+        }
+        return Integer.MAX_VALUE;
+    }
+
+    public static class SafeConcurrentHashMap<K, V> extends ConcurrentHashMap<K, V> {
+        private static final long serialVersionUID = 1L;
+
+        public SafeConcurrentHashMap() {}
+
+        public SafeConcurrentHashMap(int initialCapacity) {
+            super(initialCapacity);
+        }
+
+        public SafeConcurrentHashMap(Map<? extends K, ? extends V> m) {
+            super(m);
+        }
+
+        @Override
+        public V computeIfAbsent(K key, Function<? super K, ? extends V> mappingFunction) {
+            V value = get(key);
+            if (value != null) {
+                return value;
+            }
+            value = mappingFunction.apply(key);
+            if (value == null) {
+                return null;
+            }
+            V exists = putIfAbsent(key, value);
+            if (exists != null) {
+                return exists;
+            }
+            return value;
+        }
+    }
 }

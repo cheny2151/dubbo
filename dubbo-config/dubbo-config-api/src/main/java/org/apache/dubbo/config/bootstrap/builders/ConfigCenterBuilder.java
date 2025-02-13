@@ -43,12 +43,16 @@ public class ConfigCenterBuilder extends AbstractBuilder<ConfigCenterConfig, Con
 
     private Map<String, String> parameters;
 
+    public static ConfigCenterBuilder newBuilder() {
+        return new ConfigCenterBuilder();
+    }
+
     public ConfigCenterBuilder protocol(String protocol) {
         this.protocol = protocol;
         return getThis();
     }
 
-	public ConfigCenterBuilder address(String address) {
+    public ConfigCenterBuilder address(String address) {
         this.address = address;
         return getThis();
     }
@@ -113,6 +117,7 @@ public class ConfigCenterBuilder extends AbstractBuilder<ConfigCenterConfig, Con
         return getThis();
     }
 
+    @Override
     public ConfigCenterConfig build() {
         ConfigCenterConfig configCenter = new ConfigCenterConfig();
         super.build(configCenter);

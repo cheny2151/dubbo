@@ -24,11 +24,12 @@ import javax.lang.model.type.DeclaredType;
 import javax.lang.model.type.TypeMirror;
 import javax.lang.model.util.Elements;
 import javax.lang.model.util.Types;
+
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * {@link TypeDefinitionBuilder} for Java {@link Map}
+ * {@link TypeBuilder} for Java {@link Map}
  *
  * @since 2.7.6
  */
@@ -45,14 +46,17 @@ public class MapTypeDefinitionBuilder implements DeclaredTypeDefinitionBuilder {
     }
 
     @Override
-    public void build(ProcessingEnvironment processingEnv, DeclaredType type, TypeDefinition typeDefinition) {
+    public TypeDefinition build(
+            ProcessingEnvironment processingEnv, DeclaredType type, Map<String, TypeDefinition> typeCache) {
+        TypeDefinition typeDefinition = new TypeDefinition(type.toString());
         // Generic Type arguments
-        type.getTypeArguments()
-                .stream()
-                .map(typeArgument -> TypeDefinitionBuilder.build(processingEnv, typeArgument)) // build the TypeDefinition from typeArgument
+        type.getTypeArguments().stream()
+                .map(typeArgument -> TypeDefinitionBuilder.build(
+                        processingEnv, typeArgument, typeCache)) // build the TypeDefinition from typeArgument
                 .filter(Objects::nonNull)
-                .forEach(typeDefinition.getItems()::add);                              // Add into the declared TypeDefinition
-
+                .map(TypeDefinition::getType)
+                .forEach(typeDefinition.getItems()::add); // Add into the declared TypeDefinition
+        return typeDefinition;
     }
 
     @Override

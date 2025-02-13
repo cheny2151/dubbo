@@ -16,11 +16,15 @@
  */
 package org.apache.dubbo.common.utils;
 
+import org.apache.dubbo.rpc.model.MethodDescriptor;
+
 import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
@@ -34,6 +38,7 @@ import static org.apache.dubbo.common.utils.MemberUtils.isPrivate;
 import static org.apache.dubbo.common.utils.MemberUtils.isStatic;
 import static org.apache.dubbo.common.utils.ReflectUtils.EMPTY_CLASS_ARRAY;
 import static org.apache.dubbo.common.utils.ReflectUtils.resolveTypes;
+import static org.apache.dubbo.common.utils.StringUtils.isNotEmpty;
 
 /**
  * Miscellaneous method utility methods.
@@ -50,7 +55,7 @@ public interface MethodUtils {
      * @param method the method to check
      * @return whether the given method is setter method
      */
-    public static boolean isSetter(Method method) {
+    static boolean isSetter(Method method) {
         return method.getName().startsWith("set")
                 && !"set".equals(method.getName())
                 && Modifier.isPublic(method.getModifiers())
@@ -65,11 +70,13 @@ public interface MethodUtils {
      * @param method the method to check
      * @return whether the given method is getter method
      */
-    public static boolean isGetter(Method method) {
+    static boolean isGetter(Method method) {
         String name = method.getName();
         return (name.startsWith("get") || name.startsWith("is"))
-                && !"get".equals(name) && !"is".equals(name)
-                && !"getClass".equals(name) && !"getObject".equals(name)
+                && !"get".equals(name)
+                && !"is".equals(name)
+                && !"getClass".equals(name)
+                && !"getObject".equals(name)
                 && Modifier.isPublic(method.getModifiers())
                 && method.getParameterTypes().length == 0
                 && ClassUtils.isPrimitive(method.getReturnType());
@@ -82,7 +89,7 @@ public interface MethodUtils {
      * @param method the method to check
      * @return whether the given method is meta method
      */
-    public static boolean isMetaMethod(Method method) {
+    static boolean isMetaMethod(Method method) {
         String name = method.getName();
         if (!(name.startsWith("get") || name.startsWith("is"))) {
             return false;
@@ -113,11 +120,9 @@ public interface MethodUtils {
      * @param method the method to check
      * @return whether the given method is deprecated method
      */
-    public static boolean isDeprecated(Method method) {
+    static boolean isDeprecated(Method method) {
         return method.getAnnotation(Deprecated.class) != null;
     }
-
-
 
     /**
      * Create an instance of {@link Predicate} for {@link Method} to exclude the specified declared class
@@ -140,8 +145,11 @@ public interface MethodUtils {
      * @return non-null read-only {@link List}
      * @since 2.7.6
      */
-    static List<Method> getMethods(Class<?> declaringClass, boolean includeInheritedTypes, boolean publicOnly,
-                                   Predicate<Method>... methodsToFilter) {
+    static List<Method> getMethods(
+            Class<?> declaringClass,
+            boolean includeInheritedTypes,
+            boolean publicOnly,
+            Predicate<Method>... methodsToFilter) {
 
         if (declaringClass == null || declaringClass.isPrimitive()) {
             return emptyList();
@@ -222,11 +230,11 @@ public interface MethodUtils {
         return getMethods(declaringClass, true, true, methodsToFilter);
     }
 
-//    static List<Method> getOverriderMethods(Class<?> implementationClass, Class<?>... superTypes) {
+    //    static List<Method> getOverriderMethods(Class<?> implementationClass, Class<?>... superTypes) {
 
-//
+    //
 
-//    }
+    //    }
 
     /**
      * Find the {@link Method} by the the specified type and method name without the parameter types
@@ -252,7 +260,9 @@ public interface MethodUtils {
     static Method findMethod(Class type, String methodName, Class<?>... parameterTypes) {
         Method method = null;
         try {
-            method = type.getDeclaredMethod(methodName, parameterTypes);
+            if (type != null && isNotEmpty(methodName)) {
+                method = type.getDeclaredMethod(methodName, parameterTypes);
+            }
         } catch (NoSuchMethodException e) {
         }
         return method;
@@ -274,6 +284,11 @@ public interface MethodUtils {
         Method method = findMethod(type, methodName, parameterTypes);
         T value = null;
 
+        if (method == null) {
+            throw new IllegalStateException(
+                    String.format("cannot find method %s,class: %s", methodName, type.getName()));
+        }
+
         try {
             final boolean isAccessible = method.isAccessible();
 
@@ -288,7 +303,6 @@ public interface MethodUtils {
 
         return value;
     }
-
 
     /**
      * Tests whether one method, as a member of a given type,
@@ -388,5 +402,99 @@ public interface MethodUtils {
     static Method findOverriddenMethod(Method overrider, Class<?> declaringClass) {
         List<Method> matchedMethods = getAllMethods(declaringClass, method -> overrides(overrider, method));
         return matchedMethods.isEmpty() ? null : matchedMethods.get(0);
+    }
+
+    /**
+     * Extract fieldName from set/get/is method. if it's not a set/get/is method, return empty string.
+     * If method equals get/is/getClass/getObject, also return empty string.
+     *
+     * @param method method
+     * @return fieldName
+     */
+    static String extractFieldName(Method method) {
+        List<String> emptyFieldMethod = Arrays.asList("is", "get", "getObject", "getClass");
+        String methodName = method.getName();
+        String fieldName = "";
+
+        if (emptyFieldMethod.contains(methodName)) {
+            return fieldName;
+        } else if (methodName.startsWith("get")) {
+            fieldName = methodName.substring("get".length());
+        } else if (methodName.startsWith("set")) {
+            fieldName = methodName.substring("set".length());
+        } else if (methodName.startsWith("is")) {
+            fieldName = methodName.substring("is".length());
+        } else {
+            return fieldName;
+        }
+
+        if (StringUtils.isNotEmpty(fieldName)) {
+            fieldName = fieldName.substring(0, 1).toLowerCase() + fieldName.substring(1);
+        }
+
+        return fieldName;
+    }
+
+    /**
+     * Invoke and return double value.
+     *
+     * @param method method
+     * @param targetObj the object the method is invoked from
+     * @return double value
+     */
+    static double invokeAndReturnDouble(Method method, Object targetObj) {
+        try {
+            return method != null ? (double) method.invoke(targetObj) : Double.NaN;
+        } catch (Exception e) {
+            return Double.NaN;
+        }
+    }
+
+    /**
+     * Invoke and return long value.
+     *
+     * @param method method
+     * @param targetObj the object the method is invoked from
+     * @return long value
+     */
+    static long invokeAndReturnLong(Method method, Object targetObj) {
+        try {
+            return method != null ? (long) method.invoke(targetObj) : -1;
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+
+    static String toShortString(Method method) {
+        StringBuilder sb = new StringBuilder(64);
+        sb.append(method.getDeclaringClass().getName());
+        sb.append('.').append(method.getName()).append('(');
+        Class<?>[] parameterTypes = method.getParameterTypes();
+        for (int i = 0, len = parameterTypes.length; i < len; i++) {
+            if (i > 0) {
+                sb.append(", ");
+            }
+            sb.append(parameterTypes[i].getSimpleName());
+        }
+        sb.append(')');
+        return sb.toString();
+    }
+
+    static String toShortString(MethodDescriptor md) {
+        Method method = md.getMethod();
+        if (method == null) {
+            StringBuilder sb = new StringBuilder(64);
+            sb.append(md.getMethodName()).append('(');
+            Class<?>[] parameterTypes = md.getParameterClasses();
+            for (int i = 0, len = parameterTypes.length; i < len; i++) {
+                if (i > 0) {
+                    sb.append(", ");
+                }
+                sb.append(parameterTypes[i].getSimpleName());
+            }
+            sb.append(')');
+            return sb.toString();
+        }
+        return toShortString(method);
     }
 }

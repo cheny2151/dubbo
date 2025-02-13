@@ -22,6 +22,7 @@ import org.apache.dubbo.common.utils.CollectionUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.common.utils.UrlUtils;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -32,63 +33,132 @@ import static org.apache.dubbo.common.constants.CommonConstants.CONFIG_CONFIGFIL
 import static org.apache.dubbo.common.constants.CommonConstants.CONFIG_ENABLE_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PATH_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PROTOCOL_KEY;
+import static org.apache.dubbo.common.constants.RemotingConstants.BACKUP_KEY;
+import static org.apache.dubbo.common.utils.PojoUtils.updatePropertyIfAbsent;
 import static org.apache.dubbo.config.Constants.CONFIG_APP_CONFIGFILE_KEY;
 import static org.apache.dubbo.config.Constants.ZOOKEEPER_PROTOCOL;
 
 /**
- * ConfigCenterConfig
+ * Configuration for the config center.
  */
 public class ConfigCenterConfig extends AbstractConfig {
-    private AtomicBoolean inited = new AtomicBoolean(false);
 
+    private final AtomicBoolean initialized = new AtomicBoolean(false);
+
+    /**
+     * The protocol used for accessing the config center.
+     */
     private String protocol;
+
+    /**
+     * The address (URL or hostname) of the config center server.
+     */
     private String address;
+
+    /**
+     * The port number for the config center server.
+     */
     private Integer port;
 
-    /* The config center cluster, it's real meaning may very on different Config Center products. */
+    /**
+     * The config center cluster, its actual meaning may vary depending on the specific config center product.
+     */
     private String cluster;
 
-    /* The namespace of the config center, generally it's used for multi-tenant,
-    but it's real meaning depends on the actual Config Center you use.
-    */
+    /**
+     * The namespace of the config center, generally used for multi-tenancy.
+     * Its actual meaning depends on the specific config center you use. Default value is CommonConstants.DUBBO.
+     */
+    private String namespace;
 
-    private String namespace = CommonConstants.DUBBO;
-    /* The group of the config center, generally it's used to identify an isolated space for a batch of config items,
-    but it's real meaning depends on the actual Config Center you use.
-    */
-    private String group = CommonConstants.DUBBO;
+    /**
+     * The group of the config center, often used to identify an isolated space for a batch of config items.
+     * Its actual meaning depends on the specific config center you use. Default value is CommonConstants.DUBBO.
+     */
+    private String group;
+
+    /**
+     * Username for authentication with the config center.
+     */
     private String username;
+
+    /**
+     * Password for authentication with the config center.
+     */
     private String password;
-    private Long timeout = 3000L;
 
-    // If the Config Center is given the highest priority, it will override all the other configurations
-    private Boolean highestPriority = true;
+    /**
+     * The timeout for accessing the config center. Default value is 30000L.
+     */
+    private Long timeout;
 
-    // Decide the behaviour when initial connection try fails, 'true' means interrupt the whole process once fail.
-    private Boolean check = true;
+    /**
+     * If the config center should have the highest priority and override all other configurations.
+     * Deprecated and no longer used. Default value is true.
+     */
+    private Boolean highestPriority;
 
-    /* Used to specify the key that your properties file mapping to, most of the time you do not need to change this parameter.
-    Notice that for Apollo, this parameter is meaningless, set the 'namespace' is enough.
-    */
-    private String configFile = CommonConstants.DEFAULT_DUBBO_PROPERTIES;
+    /**
+     * Behavior when the initial connection attempt to the config center fails.
+     * 'true' means interrupt the whole process once a failure occurs. Default value is true.
+     */
+    private Boolean check;
 
-    /* the .properties file under 'configFile' is global shared while .properties under this one is limited only to this application
-    */
+    /**
+     * Key mapping for properties files. Most of the time, you do not need to change this parameter.
+     * Default value is CommonConstants.DEFAULT_DUBBO_PROPERTIES.
+     */
+    private String configFile;
+
+    /**
+     * The properties file under 'configFile' is global shared, while '.properties' under this one is limited only to this application.
+     */
     private String appConfigFile;
 
-    /* If the Config Center product you use have some special parameters that is not covered by this class, you can add it to here.
-    For example, with XML:
-      <dubbo:config-center>
-           <dubbo:parameter key="{your key}" value="{your value}" />
-      </dubbo:config-center>
+    /**
+     * Additional parameters specific to your config center product can be added here.
+     * For example, with XML:
+     * <dubbo:config-center>
+     * <dubbo:parameter key="{your key}" value="{your value}" />
+     * </dubbo:config-center>
      */
     private Map<String, String> parameters;
 
+    /**
+     * External configuration for the config center.
+     */
     private Map<String, String> externalConfiguration;
 
+    /**
+     * Application-specific external configuration for the config center.
+     */
     private Map<String, String> appExternalConfiguration;
 
-    public ConfigCenterConfig() {
+    public ConfigCenterConfig() {}
+
+    public ConfigCenterConfig(ApplicationModel applicationModel) {
+        super(applicationModel);
+    }
+
+    @Override
+    protected void checkDefault() {
+        super.checkDefault();
+
+        if (namespace == null) {
+            namespace = CommonConstants.DUBBO;
+        }
+        if (group == null) {
+            group = CommonConstants.DUBBO;
+        }
+        if (timeout == null) {
+            timeout = 30000L;
+        }
+        if (check == null) {
+            check = true;
+        }
+        if (configFile == null) {
+            configFile = CommonConstants.DEFAULT_DUBBO_PROPERTIES;
+        }
     }
 
     public URL toUrl() {
@@ -97,16 +167,20 @@ public class ConfigCenterConfig extends AbstractConfig {
         if (StringUtils.isEmpty(address)) {
             address = ANYHOST_VALUE;
         }
-        map.put(PATH_KEY, ConfigCenterConfig.class.getSimpleName());
-        // use 'zookeeper' as the default configcenter.
+        map.put(PATH_KEY, ConfigCenterConfig.class.getName());
+        // use 'zookeeper' as the default config center.
         if (StringUtils.isEmpty(map.get(PROTOCOL_KEY))) {
             map.put(PROTOCOL_KEY, ZOOKEEPER_PROTOCOL);
         }
-        return UrlUtils.parseURL(address, map);
+        return UrlUtils.parseURL(address, map).setScopeModel(getScopeModel());
     }
 
-    public boolean checkOrUpdateInited() {
-        return inited.compareAndSet(false, true);
+    public boolean checkOrUpdateInitialized(boolean update) {
+        return initialized.compareAndSet(false, update);
+    }
+
+    public void setInitialized(boolean val) {
+        initialized.set(val);
     }
 
     public Map<String, String> getExternalConfiguration() {
@@ -143,12 +217,16 @@ public class ConfigCenterConfig extends AbstractConfig {
         if (address != null) {
             try {
                 URL url = URL.valueOf(address);
-                setUsername(url.getUsername());
-                setPassword(url.getPassword());
-                updateIdIfAbsent(url.getProtocol());
-                updateProtocolIfAbsent(url.getProtocol());
-                updatePortIfAbsent(url.getPort());
-                updateParameters(url.getParameters());
+                updatePropertyIfAbsent(this::getUsername, this::setUsername, url.getUsername());
+                updatePropertyIfAbsent(this::getPassword, this::setPassword, url.getPassword());
+                updatePropertyIfAbsent(this::getProtocol, this::setProtocol, url.getProtocol());
+                updatePropertyIfAbsent(this::getPort, this::setPort, url.getPort());
+
+                Map<String, String> params = url.getParameters();
+                if (CollectionUtils.isNotEmptyMap(params)) {
+                    params.remove(BACKUP_KEY);
+                }
+                updateParameters(params);
             } catch (Exception ignored) {
             }
         }
@@ -194,11 +272,13 @@ public class ConfigCenterConfig extends AbstractConfig {
         this.check = check;
     }
 
+    @Deprecated
     @Parameter(key = CONFIG_ENABLE_KEY)
     public Boolean isHighestPriority() {
         return highestPriority;
     }
 
+    @Deprecated
     public void setHighestPriority(Boolean highestPriority) {
         this.highestPriority = highestPriority;
     }
@@ -254,25 +334,13 @@ public class ConfigCenterConfig extends AbstractConfig {
     }
 
     @Override
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public boolean isValid() {
         if (StringUtils.isEmpty(address)) {
             return false;
         }
 
         return address.contains("://") || StringUtils.isNotEmpty(protocol);
-    }
-
-    protected void updatePortIfAbsent(Integer value) {
-        if (value != null && value > 0 && port == null) {
-            this.port = value;
-        }
-    }
-
-    protected void updateProtocolIfAbsent(String value) {
-        if (StringUtils.isNotEmpty(value) && StringUtils.isEmpty(protocol)) {
-            this.protocol = value;
-        }
     }
 
     public void updateParameters(Map<String, String> parameters) {
@@ -285,5 +353,4 @@ public class ConfigCenterConfig extends AbstractConfig {
             this.parameters.putAll(parameters);
         }
     }
-
 }

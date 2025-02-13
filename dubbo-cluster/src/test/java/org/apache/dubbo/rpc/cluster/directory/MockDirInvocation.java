@@ -19,9 +19,12 @@ package org.apache.dubbo.rpc.cluster.directory;
 import org.apache.dubbo.rpc.AttachmentsAdapter;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
+import org.apache.dubbo.rpc.model.ServiceModel;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.apache.dubbo.common.constants.CommonConstants.DUBBO_VERSION_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.GROUP_KEY;
@@ -33,7 +36,7 @@ import static org.apache.dubbo.rpc.Constants.TOKEN_KEY;
 /**
  * MockInvocation.java
  */
-public class MockDirInvocation implements Invocation {
+class MockDirInvocation implements Invocation {
 
     private Map<String, Object> attachments;
 
@@ -52,6 +55,11 @@ public class MockDirInvocation implements Invocation {
         return null;
     }
 
+    @Override
+    public String getProtocolServiceKey() {
+        return null;
+    }
+
     public String getMethodName() {
         return "echo";
     }
@@ -62,11 +70,11 @@ public class MockDirInvocation implements Invocation {
     }
 
     public Class<?>[] getParameterTypes() {
-        return new Class[]{String.class};
+        return new Class[] {String.class};
     }
 
     public Object[] getArguments() {
-        return new Object[]{"aa"};
+        return new Object[] {"aa"};
     }
 
     public Map<String, String> getAttachments() {
@@ -79,13 +87,23 @@ public class MockDirInvocation implements Invocation {
     }
 
     @Override
+    public Map<String, Object> copyObjectAttachments() {
+        return new HashMap<>(attachments);
+    }
+
+    @Override
+    public void foreachAttachment(Consumer<Map.Entry<String, Object>> consumer) {
+        attachments.entrySet().forEach(consumer);
+    }
+
+    @Override
     public void setAttachment(String key, String value) {
         setObjectAttachment(key, value);
     }
 
     @Override
     public void setAttachment(String key, Object value) {
-       setObjectAttachment(key, value);
+        setObjectAttachment(key, value);
     }
 
     @Override
@@ -105,9 +123,7 @@ public class MockDirInvocation implements Invocation {
 
     @Override
     public void setObjectAttachmentIfAbsent(String key, Object value) {
-        if (attachments.get(key) == null) {
-            attachments.put(key, value);
-        }
+        attachments.putIfAbsent(key, value);
     }
 
     public Invoker<?> getInvoker() {
@@ -121,6 +137,14 @@ public class MockDirInvocation implements Invocation {
 
     @Override
     public Object get(Object key) {
+        return null;
+    }
+
+    @Override
+    public void setServiceModel(ServiceModel serviceModel) {}
+
+    @Override
+    public ServiceModel getServiceModel() {
         return null;
     }
 
@@ -143,6 +167,14 @@ public class MockDirInvocation implements Invocation {
     }
 
     @Override
+    public void addInvokedInvoker(Invoker<?> invoker) {}
+
+    @Override
+    public List<Invoker<?>> getInvokedInvokers() {
+        return null;
+    }
+
+    @Override
     public Object getObjectAttachment(String key, Object defaultValue) {
         Object result = attachments.get(key);
         if (result == null) {
@@ -150,5 +182,4 @@ public class MockDirInvocation implements Invocation {
         }
         return result;
     }
-
 }

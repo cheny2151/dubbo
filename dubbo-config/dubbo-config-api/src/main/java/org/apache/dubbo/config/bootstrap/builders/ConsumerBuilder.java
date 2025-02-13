@@ -61,6 +61,16 @@ public class ConsumerBuilder extends AbstractReferenceBuilder<ConsumerConfig, Co
      */
     private Integer shareconnections;
 
+    /**
+     *  Url Merge Processor
+     *  Used to customize the URL merge of consumer and provider
+     */
+    private String urlMergeProcessor;
+
+    public static ConsumerBuilder newBuilder() {
+        return new ConsumerBuilder();
+    }
+
     public ConsumerBuilder isDefault(Boolean isDefault) {
         this.isDefault = isDefault;
         return getThis();
@@ -96,6 +106,12 @@ public class ConsumerBuilder extends AbstractReferenceBuilder<ConsumerConfig, Co
         return getThis();
     }
 
+    public ConsumerBuilder urlMergeProcessor(String urlMergeProcessor) {
+        this.urlMergeProcessor = urlMergeProcessor;
+        return getThis();
+    }
+
+    @Override
     public ConsumerConfig build() {
         ConsumerConfig consumer = new ConsumerConfig();
         super.build(consumer);
@@ -107,6 +123,7 @@ public class ConsumerBuilder extends AbstractReferenceBuilder<ConsumerConfig, Co
         consumer.setThreads(threads);
         consumer.setQueues(queues);
         consumer.setShareconnections(shareconnections);
+        consumer.setUrlMergeProcessor(urlMergeProcessor);
 
         return consumer;
     }

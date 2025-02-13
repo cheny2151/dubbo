@@ -19,6 +19,7 @@ package org.apache.dubbo.metadata.test;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
+import org.apache.dubbo.metadata.MappingListener;
 import org.apache.dubbo.metadata.report.identifier.KeyTypeEnum;
 import org.apache.dubbo.metadata.report.identifier.MetadataIdentifier;
 import org.apache.dubbo.metadata.report.identifier.ServiceMetadataIdentifier;
@@ -30,15 +31,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.apache.dubbo.common.constants.CommonConstants.SIDE_KEY;
-
 /**
  * ZookeeperRegistry
  */
-public class JTestMetadataReport4Test extends AbstractMetadataReport {
+class JTestMetadataReport4Test extends AbstractMetadataReport {
 
-    private final static Logger logger = LoggerFactory.getLogger(JTestMetadataReport4Test.class);
-
+    private static final Logger logger = LoggerFactory.getLogger(JTestMetadataReport4Test.class);
 
     public JTestMetadataReport4Test(URL url) {
         super(url);
@@ -46,9 +44,8 @@ public class JTestMetadataReport4Test extends AbstractMetadataReport {
 
     public volatile Map<String, String> store = new ConcurrentHashMap<>();
 
-
     private static String getProtocol(URL url) {
-        String protocol = url.getParameter(SIDE_KEY);
+        String protocol = url.getSide();
         protocol = protocol == null ? url.getProtocol() : protocol;
         return protocol;
     }
@@ -59,7 +56,8 @@ public class JTestMetadataReport4Test extends AbstractMetadataReport {
     }
 
     @Override
-    protected void doStoreConsumerMetadata(MetadataIdentifier consumerMetadataIdentifier, String serviceParameterString) {
+    protected void doStoreConsumerMetadata(
+            MetadataIdentifier consumerMetadataIdentifier, String serviceParameterString) {
         store.put(consumerMetadataIdentifier.getUniqueKey(KeyTypeEnum.UNIQUE_KEY), serviceParameterString);
     }
 
@@ -100,4 +98,7 @@ public class JTestMetadataReport4Test extends AbstractMetadataReport {
     public String getServiceDefinition(MetadataIdentifier consumerMetadataIdentifier) {
         return store.get(consumerMetadataIdentifier.getUniqueKey(KeyTypeEnum.UNIQUE_KEY));
     }
+
+    @Override
+    public void removeServiceAppMappingListener(String serviceKey, MappingListener listener) {}
 }

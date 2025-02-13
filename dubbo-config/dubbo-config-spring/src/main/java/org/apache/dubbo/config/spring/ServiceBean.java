@@ -20,13 +20,15 @@ import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.ServiceConfig;
 import org.apache.dubbo.config.annotation.Service;
 import org.apache.dubbo.config.spring.context.event.ServiceBeanExportedEvent;
-import org.apache.dubbo.config.spring.extension.SpringExtensionFactory;
+import org.apache.dubbo.config.spring.util.DubboBeanUtils;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ModuleModel;
 
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.BeanNameAware;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,9 +39,12 @@ import org.springframework.context.ApplicationEventPublisherAware;
  *
  * @export
  */
-public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean, DisposableBean,
-        ApplicationContextAware, BeanNameAware, ApplicationEventPublisherAware {
-
+public class ServiceBean<T> extends ServiceConfig<T>
+        implements InitializingBean,
+                DisposableBean,
+                ApplicationContextAware,
+                BeanNameAware,
+                ApplicationEventPublisherAware {
 
     private static final long serialVersionUID = 213195494150089726L;
 
@@ -51,20 +56,41 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
 
     private ApplicationEventPublisher applicationEventPublisher;
 
-    public ServiceBean() {
-        super();
+    @Autowired
+    public ServiceBean(ModuleModel moduleModel) {
+        super(moduleModel);
         this.service = null;
     }
 
-    public ServiceBean(Service service) {
+    public ServiceBean(ApplicationContext applicationContext) {
+        super();
+        this.service = null;
+        this.applicationContext = applicationContext;
+        this.setScopeModel(DubboBeanUtils.getModuleModel(applicationContext));
+    }
+
+    public ServiceBean(ApplicationContext applicationContext, ModuleModel moduleModel) {
+        super(moduleModel);
+        this.service = null;
+        this.applicationContext = applicationContext;
+    }
+
+    public ServiceBean(ApplicationContext applicationContext, Service service) {
         super(service);
         this.service = service;
+        this.applicationContext = applicationContext;
+        this.setScopeModel(DubboBeanUtils.getModuleModel(applicationContext));
+    }
+
+    public ServiceBean(ApplicationContext applicationContext, ModuleModel moduleModel, Service service) {
+        super(moduleModel, service);
+        this.service = service;
+        this.applicationContext = applicationContext;
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        SpringExtensionFactory.addApplicationContext(applicationContext);
     }
 
     @Override
@@ -88,6 +114,10 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
                 setPath(getInterface());
             }
         }
+        // register service bean
+        ModuleModel moduleModel = DubboBeanUtils.getModuleModel(applicationContext);
+        moduleModel.getConfigManager().addService(this);
+        moduleModel.getDeployer().setPending();
     }
 
     /**
@@ -96,7 +126,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
      * @return {@link ServiceBean}'s name
      * @since 2.6.5
      */
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public String getBeanName() {
         return this.beanName;
     }
@@ -105,7 +135,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
      * @since 2.6.5
      */
     @Override
-    public void exported() {
+    protected void exported() {
         super.exported();
         // Publish ServiceBeanExportedEvent
         publishExportEvent();
@@ -122,7 +152,7 @@ public class ServiceBean<T> extends ServiceConfig<T> implements InitializingBean
     @Override
     public void destroy() throws Exception {
         // no need to call unexport() here, see
-        // org.apache.dubbo.config.spring.extension.SpringExtensionFactory.ShutdownHookListener
+        // org.apache.dubbo.config.spring.extension.SpringExtensionInjector.ShutdownHookListener
     }
 
     // merged from dubbox

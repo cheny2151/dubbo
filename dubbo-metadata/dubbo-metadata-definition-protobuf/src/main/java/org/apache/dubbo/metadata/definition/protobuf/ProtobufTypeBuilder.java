@@ -16,17 +16,13 @@
  */
 package org.apache.dubbo.metadata.definition.protobuf;
 
+import org.apache.dubbo.common.extension.Activate;
+import org.apache.dubbo.common.lang.Prioritized;
 import org.apache.dubbo.common.logger.Logger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.metadata.definition.TypeDefinitionBuilder;
 import org.apache.dubbo.metadata.definition.builder.TypeBuilder;
 import org.apache.dubbo.metadata.definition.model.TypeDefinition;
-
-import com.google.protobuf.ByteString;
-import com.google.protobuf.Descriptors;
-import com.google.protobuf.GeneratedMessageV3;
-import com.google.protobuf.ProtocolStringList;
-import com.google.protobuf.UnknownFieldSet;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
@@ -36,7 +32,14 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ProtobufTypeBuilder implements TypeBuilder {
+import com.google.protobuf.ByteString;
+import com.google.protobuf.Descriptors;
+import com.google.protobuf.GeneratedMessageV3;
+import com.google.protobuf.ProtocolStringList;
+import com.google.protobuf.UnknownFieldSet;
+
+@Activate(onClass = "com.google.protobuf.GeneratedMessageV3")
+public class ProtobufTypeBuilder implements TypeBuilder, Prioritized {
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private static final Pattern MAP_PATTERN = Pattern.compile("^java\\.util\\.Map<(\\S+), (\\S+)>$");
     private static final Pattern LIST_PATTERN = Pattern.compile("^java\\.util\\.List<(\\S+)>$");
@@ -47,17 +50,42 @@ public class ProtobufTypeBuilder implements TypeBuilder {
      */
     private static Type STRING_LIST_TYPE;
 
+    private final boolean protobufExist;
+
     static {
         try {
-            STRING_LIST_TYPE = ProtobufTypeBuilder.class.getDeclaredField("LIST").getGenericType();
+            STRING_LIST_TYPE =
+                    ProtobufTypeBuilder.class.getDeclaredField("LIST").getGenericType();
         } catch (NoSuchFieldException e) {
             // do nothing
         }
     }
 
+    public ProtobufTypeBuilder() {
+        protobufExist = checkProtobufExist();
+    }
+
+    private boolean checkProtobufExist() {
+        try {
+            Class.forName("com.google.protobuf.GeneratedMessageV3");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
     @Override
-    public boolean accept(Type type, Class<?> clazz) {
+    public int getPriority() {
+        return -1;
+    }
+
+    @Override
+    public boolean accept(Class<?> clazz) {
         if (clazz == null) {
+            return false;
+        }
+
+        if (!protobufExist) {
             return false;
         }
 
@@ -65,11 +93,16 @@ public class ProtobufTypeBuilder implements TypeBuilder {
     }
 
     @Override
-    public TypeDefinition build(Type type, Class<?> clazz, Map<Class<?>, TypeDefinition> typeCache) {
-        TypeDefinition typeDefinition = new TypeDefinition(clazz.getName());
+    public TypeDefinition build(Type type, Class<?> clazz, Map<String, TypeDefinition> typeCache) {
+        String canonicalName = clazz.getCanonicalName();
+        TypeDefinition typeDefinition = typeCache.get(canonicalName);
+        if (typeDefinition != null) {
+            return typeDefinition;
+        }
         try {
             GeneratedMessageV3.Builder builder = getMessageBuilder(clazz);
             typeDefinition = buildProtobufTypeDefinition(clazz, builder, typeCache);
+            typeCache.put(canonicalName, typeDefinition);
         } catch (Exception e) {
             logger.info("TypeDefinition build failed.", e);
         }
@@ -82,48 +115,52 @@ public class ProtobufTypeBuilder implements TypeBuilder {
         return (GeneratedMessageV3.Builder) method.invoke(null, null);
     }
 
-    private TypeDefinition buildProtobufTypeDefinition(Class<?> clazz, GeneratedMessageV3.Builder builder, Map<Class<?>, TypeDefinition> typeCache) {
-        TypeDefinition typeDefinition = new TypeDefinition(clazz.getName());
+    private TypeDefinition buildProtobufTypeDefinition(
+            Class<?> clazz, GeneratedMessageV3.Builder builder, Map<String, TypeDefinition> typeCache) {
+        String canonicalName = clazz.getCanonicalName();
+        TypeDefinition td = new TypeDefinition(canonicalName);
         if (builder == null) {
-            return typeDefinition;
+            return td;
         }
 
-        Map<String, TypeDefinition> properties = new HashMap<>();
+        Map<String, String> properties = new HashMap<>();
         Method[] methods = builder.getClass().getDeclaredMethods();
         for (Method method : methods) {
             String methodName = method.getName();
 
             if (isSimplePropertySettingMethod(method)) {
                 // property of custom type or primitive type
-                properties.put(generateSimpleFiledName(methodName), TypeDefinitionBuilder.build(method.getGenericParameterTypes()[0], method.getParameterTypes()[0], typeCache));
+                TypeDefinition fieldTd = TypeDefinitionBuilder.build(
+                        method.getGenericParameterTypes()[0], method.getParameterTypes()[0], typeCache);
+                properties.put(generateSimpleFiledName(methodName), fieldTd.getType());
             } else if (isMapPropertySettingMethod(method)) {
                 // property of map
                 Type type = method.getGenericParameterTypes()[0];
                 String fieldName = generateMapFieldName(methodName);
                 validateMapType(fieldName, type.toString());
-                properties.put(fieldName, TypeDefinitionBuilder.build(type, method.getParameterTypes()[0], typeCache));
+                TypeDefinition fieldTd = TypeDefinitionBuilder.build(type, method.getParameterTypes()[0], typeCache);
+                properties.put(fieldName, fieldTd.getType());
             } else if (isListPropertyGettingMethod(method)) {
                 // property of list
                 Type type = method.getGenericReturnType();
                 String fieldName = generateListFieldName(methodName);
-                TypeDefinition td;
+                TypeDefinition fieldTd;
                 if (ProtocolStringList.class.isAssignableFrom(method.getReturnType())) {
                     // property defined as "repeated string" transform to ProtocolStringList,
                     // should be build as List<String>.
-                    td = TypeDefinitionBuilder.build(STRING_LIST_TYPE, List.class, typeCache);
+                    fieldTd = TypeDefinitionBuilder.build(STRING_LIST_TYPE, List.class, typeCache);
                 } else {
                     // property without generic type should not be build ex method return List
                     if (!LIST_PATTERN.matcher(type.toString()).matches()) {
                         continue;
                     }
-                    td = TypeDefinitionBuilder.build(type, method.getReturnType(), typeCache);
+                    fieldTd = TypeDefinitionBuilder.build(type, method.getReturnType(), typeCache);
                 }
-                properties.put(fieldName, td);
+                properties.put(fieldName, fieldTd.getType());
             }
         }
-        typeDefinition.setProperties(properties);
-        typeCache.put(clazz, typeDefinition);
-        return typeDefinition;
+        td.setProperties(properties);
+        return td;
     }
 
     /**
@@ -137,8 +174,8 @@ public class ProtobufTypeBuilder implements TypeBuilder {
     private void validateMapType(String fieldName, String typeName) {
         Matcher matcher = MAP_PATTERN.matcher(typeName);
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("Map protobuf property " + fieldName + "of Type " +
-                    typeName + " can't be parsed.The type name should mathch[" + MAP_PATTERN.toString() + "].");
+            throw new IllegalArgumentException("Map protobuf property " + fieldName + "of Type " + typeName
+                    + " can't be parsed.The type name should mathch[" + MAP_PATTERN.toString() + "].");
         }
     }
 
@@ -174,7 +211,6 @@ public class ProtobufTypeBuilder implements TypeBuilder {
     private String generateListFieldName(String methodName) {
         return toCamelCase(methodName.substring(3, methodName.length() - 4));
     }
-
 
     private String toCamelCase(String nameString) {
         char[] chars = nameString.toCharArray();
@@ -226,13 +262,8 @@ public class ProtobufTypeBuilder implements TypeBuilder {
         // Enum property has two setting method.
         // skip setXXXValue(int value)
         // parse setXXX(SomeEnum value)
-        if (methodName.endsWith("Value") && types[0] == int.class) {
-            return false;
-        }
-
-        return true;
+        return !methodName.endsWith("Value") || types[0] != int.class;
     }
-
 
     /**
      * judge List property</br>
@@ -246,7 +277,6 @@ public class ProtobufTypeBuilder implements TypeBuilder {
         String methodName = method.getName();
         Class<?> type = method.getReturnType();
 
-
         if (!methodName.startsWith("get") || !methodName.endsWith("List")) {
             return false;
         }
@@ -257,11 +287,7 @@ public class ProtobufTypeBuilder implements TypeBuilder {
         }
 
         // if field name end with List, should skip
-        if (!List.class.isAssignableFrom(type)) {
-            return false;
-        }
-
-        return true;
+        return List.class.isAssignableFrom(type);
     }
 
     /**
@@ -275,10 +301,6 @@ public class ProtobufTypeBuilder implements TypeBuilder {
     private boolean isMapPropertySettingMethod(Method methodTemp) {
         String methodName = methodTemp.getName();
         Class[] parameters = methodTemp.getParameterTypes();
-        if (methodName.startsWith("putAll") && parameters.length == 1 && Map.class.isAssignableFrom(parameters[0])) {
-            return true;
-        }
-
-        return false;
+        return methodName.startsWith("putAll") && parameters.length == 1 && Map.class.isAssignableFrom(parameters[0]);
     }
 }

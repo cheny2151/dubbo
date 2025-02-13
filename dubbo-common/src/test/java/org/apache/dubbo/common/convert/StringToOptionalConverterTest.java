@@ -16,10 +16,10 @@
  */
 package org.apache.dubbo.common.convert;
 
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import java.util.Optional;
 
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -30,22 +30,23 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToOptionalConverterTest {
+class StringToOptionalConverterTest {
 
     private StringToOptionalConverter converter;
 
     @BeforeEach
     public void init() {
-        converter = (StringToOptionalConverter) getExtensionLoader(Converter.class).getExtension("string-to-optional");
+        converter =
+                (StringToOptionalConverter) getExtensionLoader(Converter.class).getExtension("string-to-optional");
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
         assertTrue(converter.accept(String.class, Optional.class));
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
         assertEquals(Optional.of("1"), converter.convert("1"));
         assertEquals(Optional.empty(), converter.convert(null));
     }

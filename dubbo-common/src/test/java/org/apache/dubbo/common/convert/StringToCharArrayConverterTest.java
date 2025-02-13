@@ -29,23 +29,24 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToCharArrayConverterTest {
+class StringToCharArrayConverterTest {
 
     private StringToCharArrayConverter converter;
 
     @BeforeEach
     public void init() {
-        converter =  (StringToCharArrayConverter) getExtensionLoader(Converter.class).getExtension("string-to-char-array");
+        converter =
+                (StringToCharArrayConverter) getExtensionLoader(Converter.class).getExtension("string-to-char-array");
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
         assertTrue(converter.accept(String.class, char[].class));
     }
 
     @Test
-    public void testConvert() {
-        assertArrayEquals(new char[]{'1', '2', '3'}, converter.convert("123"));
+    void testConvert() {
+        assertArrayEquals(new char[] {'1', '2', '3'}, converter.convert("123"));
         assertNull(converter.convert(null));
     }
 }

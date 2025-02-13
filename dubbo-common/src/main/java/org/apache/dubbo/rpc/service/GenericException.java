@@ -31,7 +31,11 @@ public class GenericException extends RuntimeException {
 
     private String exceptionMessage;
 
-    public GenericException() {
+    public GenericException() {}
+
+    public GenericException(String exceptionMessage) {
+        super(exceptionMessage);
+        this.exceptionMessage = exceptionMessage;
     }
 
     public GenericException(String exceptionClass, String exceptionMessage) {
@@ -44,6 +48,12 @@ public class GenericException extends RuntimeException {
         super(StringUtils.toString(cause));
         this.exceptionClass = cause.getClass().getName();
         this.exceptionMessage = cause.getMessage();
+    }
+
+    public GenericException(String message, Throwable cause, String exceptionClass, String exceptionMessage) {
+        super(message, cause);
+        this.exceptionClass = exceptionClass;
+        this.exceptionMessage = exceptionMessage;
     }
 
     public String getExceptionClass() {
@@ -61,5 +71,4 @@ public class GenericException extends RuntimeException {
     public void setExceptionMessage(String exceptionMessage) {
         this.exceptionMessage = exceptionMessage;
     }
-
 }

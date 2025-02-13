@@ -19,7 +19,9 @@ package org.apache.dubbo.rpc.cluster.governance;
 import org.apache.dubbo.common.config.configcenter.ConfigurationListener;
 import org.apache.dubbo.common.extension.SPI;
 
-@SPI("default")
+import static org.apache.dubbo.common.extension.ExtensionScope.MODULE;
+
+@SPI(value = "default", scope = MODULE)
 public interface GovernanceRuleRepository {
 
     String DEFAULT_GROUP = "dubbo";
@@ -34,8 +36,7 @@ public interface GovernanceRuleRepository {
         addListener(key, DEFAULT_GROUP, listener);
     }
 
-
-    /*
+    /**
      * {@link #removeListener(String, String, ConfigurationListener)}
      *
      * @param key      the key to represent a configuration

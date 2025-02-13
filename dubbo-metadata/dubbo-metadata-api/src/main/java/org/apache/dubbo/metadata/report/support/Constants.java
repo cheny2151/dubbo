@@ -14,23 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dubbo.metadata.report.support;
 
 public interface Constants {
     String METADATA_REPORT_KEY = "metadata";
 
-    String RETRY_TIMES_KEY = "retry.times";
-
     Integer DEFAULT_METADATA_REPORT_RETRY_TIMES = 100;
-
-    String RETRY_PERIOD_KEY = "retry.period";
 
     Integer DEFAULT_METADATA_REPORT_RETRY_PERIOD = 3000;
 
-    String SYNC_REPORT_KEY = "sync.report";
-
-    String CYCLE_REPORT_KEY = "cycle.report";
-
     Boolean DEFAULT_METADATA_REPORT_CYCLE_REPORT = true;
+
+    String CACHE = ".cache";
+
+    String DUBBO_METADATA = "/.dubbo/dubbo-metadata-";
 }

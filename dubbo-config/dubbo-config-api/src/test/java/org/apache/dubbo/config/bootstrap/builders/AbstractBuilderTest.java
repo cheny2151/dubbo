@@ -18,11 +18,11 @@ package org.apache.dubbo.config.bootstrap.builders;
 
 import org.apache.dubbo.config.AbstractConfig;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.HashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 class AbstractBuilderTest {
 
@@ -31,13 +31,6 @@ class AbstractBuilderTest {
         Builder builder = new Builder();
         builder.id("id");
         Assertions.assertEquals("id", builder.build().getId());
-    }
-
-    @Test
-    void prefix() {
-        Builder builder = new Builder();
-        builder.prefix("prefix");
-        Assertions.assertEquals("prefix", builder.build().getPrefix());
     }
 
     @Test
@@ -96,13 +89,11 @@ class AbstractBuilderTest {
     void build() {
         Builder builder = new Builder();
         builder.id("id");
-        builder.prefix("prefix");
 
         Config config = builder.build();
         Config config2 = builder.build();
 
         Assertions.assertEquals("id", config.getId());
-        Assertions.assertEquals("prefix", config.getPrefix());
 
         Assertions.assertNotSame(config, config2);
     }
@@ -121,6 +112,5 @@ class AbstractBuilderTest {
         }
     }
 
-    private static class Config extends AbstractConfig {
-    }
+    private static class Config extends AbstractConfig {}
 }

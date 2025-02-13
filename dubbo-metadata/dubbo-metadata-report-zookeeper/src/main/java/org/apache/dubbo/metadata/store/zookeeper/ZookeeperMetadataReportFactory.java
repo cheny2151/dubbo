@@ -16,17 +16,31 @@
  */
 package org.apache.dubbo.metadata.store.zookeeper;
 
-import org.apache.dubbo.metadata.report.identifier.KeyTypeEnum;
-import org.apache.dubbo.metadata.report.support.ConfigCenterBasedMetadataReportFactory;
+import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.extension.DisableInject;
+import org.apache.dubbo.metadata.report.MetadataReport;
+import org.apache.dubbo.metadata.report.support.AbstractMetadataReportFactory;
+import org.apache.dubbo.remoting.zookeeper.curator5.ZookeeperClientManager;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 /**
  * ZookeeperRegistryFactory.
- *
- * @revised 2.7.8 {@link ConfigCenterBasedMetadataReportFactory}
  */
-public class ZookeeperMetadataReportFactory extends ConfigCenterBasedMetadataReportFactory {
+public class ZookeeperMetadataReportFactory extends AbstractMetadataReportFactory {
 
-    public ZookeeperMetadataReportFactory() {
-        super(KeyTypeEnum.PATH);
+    private ZookeeperClientManager zookeeperClientManager;
+
+    public ZookeeperMetadataReportFactory(ApplicationModel applicationModel) {
+        this.zookeeperClientManager = ZookeeperClientManager.getInstance(applicationModel);
+    }
+
+    @DisableInject
+    public void setZookeeperTransporter(ZookeeperClientManager zookeeperClientManager) {
+        this.zookeeperClientManager = zookeeperClientManager;
+    }
+
+    @Override
+    public MetadataReport createMetadataReport(URL url) {
+        return new ZookeeperMetadataReport(url, zookeeperClientManager);
     }
 }

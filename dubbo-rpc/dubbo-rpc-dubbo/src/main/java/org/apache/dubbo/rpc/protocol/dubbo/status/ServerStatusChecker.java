@@ -48,14 +48,13 @@ public class ServerStatusChecker implements StatusChecker {
                 break;
             }
             if (buf.length() > 0) {
-                buf.append(",");
+                buf.append(',');
             }
             buf.append(server.getLocalAddress());
             buf.append("(clients:");
             buf.append(server.getChannels().size());
-            buf.append(")");
+            buf.append(')');
         }
         return new Status(level, buf.toString());
     }
-
 }

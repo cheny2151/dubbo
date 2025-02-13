@@ -16,8 +16,6 @@
  */
 package org.apache.dubbo.common.convert.multiple;
 
-import org.junit.jupiter.api.Test;
-
 import java.util.Collection;
 import java.util.Deque;
 import java.util.List;
@@ -28,6 +26,8 @@ import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TransferQueue;
 
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
@@ -35,10 +35,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  *
  * @since 2.7.8
  */
-public class MultiValueConverterTest {
+class MultiValueConverterTest {
 
     @Test
-    public void testFind() {
+    void testFind() {
         MultiValueConverter converter = MultiValueConverter.find(String.class, String[].class);
         assertEquals(StringToArrayConverter.class, converter.getClass());
 

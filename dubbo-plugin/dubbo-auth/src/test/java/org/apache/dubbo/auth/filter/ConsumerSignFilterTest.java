@@ -21,6 +21,8 @@ import org.apache.dubbo.common.URL;
 import org.apache.dubbo.common.constants.CommonConstants;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
+import org.apache.dubbo.rpc.model.FrameworkModel;
+
 import org.junit.jupiter.api.Test;
 
 import static org.mockito.ArgumentMatchers.anyString;
@@ -31,7 +33,6 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-
 class ConsumerSignFilterTest {
 
     @Test
@@ -40,7 +41,7 @@ class ConsumerSignFilterTest {
         Invoker invoker = mock(Invoker.class);
         Invocation invocation = mock(Invocation.class);
         when(invoker.getUrl()).thenReturn(url);
-        ConsumerSignFilter consumerSignFilter = new ConsumerSignFilter();
+        ConsumerSignFilter consumerSignFilter = new ConsumerSignFilter(FrameworkModel.defaultModel());
         consumerSignFilter.invoke(invoker, invocation);
         verify(invocation, never()).setAttachment(eq(Constants.REQUEST_SIGNATURE_KEY), anyString());
     }
@@ -51,11 +52,12 @@ class ConsumerSignFilterTest {
                 .addParameter(Constants.ACCESS_KEY_ID_KEY, "ak")
                 .addParameter(Constants.SECRET_ACCESS_KEY_KEY, "sk")
                 .addParameter(CommonConstants.APPLICATION_KEY, "test")
-                .addParameter(Constants.SERVICE_AUTH, true);
+                .addParameter(Constants.AUTHENTICATOR_KEY, "accesskey")
+                .addParameter(Constants.AUTH_KEY, true);
         Invoker invoker = mock(Invoker.class);
         Invocation invocation = mock(Invocation.class);
         when(invoker.getUrl()).thenReturn(url);
-        ConsumerSignFilter consumerSignFilter = new ConsumerSignFilter();
+        ConsumerSignFilter consumerSignFilter = new ConsumerSignFilter(FrameworkModel.defaultModel());
         consumerSignFilter.invoke(invoker, invocation);
         verify(invocation, times(1)).setAttachment(eq(Constants.REQUEST_SIGNATURE_KEY), anyString());
     }

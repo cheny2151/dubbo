@@ -37,21 +37,23 @@ public class AllChannelHandler extends WrappedChannelHandler {
 
     @Override
     public void connected(Channel channel) throws RemotingException {
-        ExecutorService executor = getExecutorService();
+        ExecutorService executor = getSharedExecutorService();
         try {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.CONNECTED));
         } catch (Throwable t) {
-            throw new ExecutionException("connect event", channel, getClass() + " error when process connected event .", t);
+            throw new ExecutionException(
+                    "connect event", channel, getClass() + " error when process connected event .", t);
         }
     }
 
     @Override
     public void disconnected(Channel channel) throws RemotingException {
-        ExecutorService executor = getExecutorService();
+        ExecutorService executor = getSharedExecutorService();
         try {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.DISCONNECTED));
         } catch (Throwable t) {
-            throw new ExecutionException("disconnect event", channel, getClass() + " error when process disconnected event .", t);
+            throw new ExecutionException(
+                    "disconnect event", channel, getClass() + " error when process disconnected event .", t);
         }
     }
 
@@ -61,17 +63,17 @@ public class AllChannelHandler extends WrappedChannelHandler {
         try {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.RECEIVED, message));
         } catch (Throwable t) {
-        	if(message instanceof Request && t instanceof RejectedExecutionException){
+            if (message instanceof Request && t instanceof RejectedExecutionException) {
                 sendFeedback(channel, (Request) message, t);
                 return;
-        	}
+            }
             throw new ExecutionException(message, channel, getClass() + " error when process received event .", t);
         }
     }
 
     @Override
     public void caught(Channel channel, Throwable exception) throws RemotingException {
-        ExecutorService executor = getExecutorService();
+        ExecutorService executor = getSharedExecutorService();
         try {
             executor.execute(new ChannelEventRunnable(channel, handler, ChannelState.CAUGHT, exception));
         } catch (Throwable t) {

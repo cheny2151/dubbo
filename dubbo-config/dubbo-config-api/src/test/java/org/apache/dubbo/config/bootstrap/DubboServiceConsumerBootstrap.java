@@ -18,6 +18,7 @@ package org.apache.dubbo.config.bootstrap;
 
 import org.apache.dubbo.config.MetadataReportConfig;
 import org.apache.dubbo.config.bootstrap.rest.UserService;
+import org.apache.dubbo.test.check.registrycenter.config.ZookeeperRegistryCenterConfig;
 
 /**
  * Dubbo Provider Bootstrap
@@ -31,20 +32,15 @@ public class DubboServiceConsumerBootstrap {
         DubboBootstrap bootstrap = DubboBootstrap.getInstance()
                 .application("dubbo-consumer-demo")
                 .protocol(builder -> builder.port(20887).name("dubbo"))
-                // Eureka
-//                .registry(builder -> builder.address("eureka://127.0.0.1:8761?registry-type=service&subscribed-services=dubbo-provider-demo"))
-
-                // Zookeeper
-                .registry("zookeeper", builder -> builder.address("zookeeper://127.0.0.1:2181?registry-type=service&subscribed-services=dubbo-provider-demo"))
-                .metadataReport(new MetadataReportConfig("zookeeper://127.0.0.1:2181"))
-
-                // Nacos
-                // .registry("nacos", builder -> builder.address("nacos://127.0.0.1:8848?registry.type=service&subscribed.services=dubbo-provider-demo"))
-
-                // Consul
-                // .registry("consul", builder -> builder.address("consul://127.0.0.1:8500?registry.type=service&subscribed.services=dubbo-provider-demo").group("namespace1"))
-                .reference("echo", builder -> builder.interfaceClass(EchoService.class).protocol("dubbo"))
-                .reference("user", builder -> builder.interfaceClass(UserService.class).protocol("rest"))
+                .registry(
+                        "zookeeper",
+                        builder -> builder.address(ZookeeperRegistryCenterConfig.getConnectionAddress()
+                                + "?registry-type=service&subscribed-services=dubbo-provider-demo"))
+                .metadataReport(new MetadataReportConfig(ZookeeperRegistryCenterConfig.getConnectionAddress()))
+                .reference("echo", builder -> builder.interfaceClass(EchoService.class)
+                        .protocol("dubbo"))
+                .reference("user", builder -> builder.interfaceClass(UserService.class)
+                        .protocol("tri"))
                 .start();
 
         EchoService echoService = bootstrap.getCache().get(EchoService.class);
@@ -53,6 +49,5 @@ public class DubboServiceConsumerBootstrap {
             Thread.sleep(2000L);
             System.out.println(echoService.echo("Hello,World"));
         }
-
     }
 }

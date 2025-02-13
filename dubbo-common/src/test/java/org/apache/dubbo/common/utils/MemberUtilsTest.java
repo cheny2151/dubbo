@@ -18,6 +18,8 @@ package org.apache.dubbo.common.utils;
 
 import org.junit.jupiter.api.Test;
 
+import static org.apache.dubbo.common.utils.MemberUtils.isPrivate;
+import static org.apache.dubbo.common.utils.MemberUtils.isPublic;
 import static org.apache.dubbo.common.utils.MemberUtils.isStatic;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,16 +29,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class MemberUtilsTest {
+class MemberUtilsTest {
 
     @Test
-    public void testIsStatic() throws NoSuchMethodException {
+    void test() throws NoSuchMethodException {
 
-        assertFalse(isStatic(getClass().getMethod("testIsStatic")));
+        assertFalse(isStatic(getClass().getMethod("noStatic")));
         assertTrue(isStatic(getClass().getMethod("staticMethod")));
+        assertTrue(isPrivate(getClass().getDeclaredMethod("privateMethod")));
+        assertTrue(isPublic(getClass().getMethod("publicMethod")));
     }
 
-    public static void staticMethod() {
+    public void noStatic() {}
 
-    }
+    public static void staticMethod() {}
+
+    private void privateMethod() {}
+
+    public void publicMethod() {}
 }

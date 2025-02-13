@@ -16,9 +16,6 @@
  */
 package org.apache.dubbo.common.convert.multiple;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -35,6 +32,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TransferQueue;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import static java.util.Arrays.asList;
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToCollectionConverterTest {
+class StringToCollectionConverterTest {
 
     private MultiValueConverter converter;
 
@@ -57,7 +57,7 @@ public class StringToCollectionConverterTest {
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
 
         assertTrue(converter.accept(String.class, Collection.class));
 
@@ -85,7 +85,7 @@ public class StringToCollectionConverterTest {
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
 
         List values = asList(1L, 2L, 3L);
 
@@ -101,16 +101,15 @@ public class StringToCollectionConverterTest {
 
         assertNull(converter.convert(null, Collection.class, Integer.class));
         assertNull(converter.convert("", Collection.class, Integer.class));
-
     }
 
     @Test
-    public void testGetSourceType() {
+    void testGetSourceType() {
         assertEquals(String.class, converter.getSourceType());
     }
 
     @Test
-    public void testGetPriority() {
+    void testGetPriority() {
         assertEquals(Integer.MAX_VALUE - 1, converter.getPriority());
     }
 }

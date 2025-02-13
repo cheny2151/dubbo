@@ -20,6 +20,7 @@ import org.apache.dubbo.config.RegistryConfig;
 import org.apache.dubbo.config.bootstrap.DubboBootstrap;
 import org.apache.dubbo.config.bootstrap.EchoService;
 import org.apache.dubbo.config.bootstrap.rest.UserService;
+import org.apache.dubbo.test.check.registrycenter.config.ZookeeperRegistryCenterConfig;
 
 /**
  * Dubbo Provider Bootstrap
@@ -31,16 +32,16 @@ public class DubboInterfaceConsumerBootstrap {
     public static void main(String[] args) throws Exception {
         RegistryConfig interfaceRegistry = new RegistryConfig();
         interfaceRegistry.setId("interfaceRegistry");
-        interfaceRegistry.setAddress("zookeeper://127.0.0.1:2181");
+        interfaceRegistry.setAddress(ZookeeperRegistryCenterConfig.getConnectionAddress());
 
         DubboBootstrap bootstrap = DubboBootstrap.getInstance()
                 .application("dubbo-consumer-demo")
                 // Zookeeper
                 .registry(interfaceRegistry)
-                // Nacos
-//                .registry("consul", builder -> builder.address("consul://127.0.0.1:8500?registry.type=service&subscribed.services=dubbo-provider-demo"))
-                .reference("echo", builder -> builder.interfaceClass(EchoService.class).protocol("dubbo"))
-                .reference("user", builder -> builder.interfaceClass(UserService.class).protocol("rest"))
+                .reference("echo", builder -> builder.interfaceClass(EchoService.class)
+                        .protocol("dubbo"))
+                .reference("user", builder -> builder.interfaceClass(UserService.class)
+                        .protocol("tri"))
                 .start()
                 .await();
 
@@ -52,6 +53,5 @@ public class DubboInterfaceConsumerBootstrap {
             System.out.println(echoService.echo("Hello,World"));
             System.out.println(userService.getUser(1L));
         }
-
     }
 }

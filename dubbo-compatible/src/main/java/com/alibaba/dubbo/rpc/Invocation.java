@@ -14,11 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package com.alibaba.dubbo.rpc;
 
+import org.apache.dubbo.rpc.model.ServiceModel;
+
+import java.beans.Transient;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 @Deprecated
 public interface Invocation extends org.apache.dubbo.rpc.Invocation {
@@ -41,13 +46,10 @@ public interface Invocation extends org.apache.dubbo.rpc.Invocation {
     }
 
     @Override
-    default void setObjectAttachmentIfAbsent(String key, Object value) {
-    }
+    default void setObjectAttachmentIfAbsent(String key, Object value) {}
 
     @Override
-    default void setObjectAttachment(String key, Object value) {
-
-    }
+    default void setObjectAttachment(String key, Object value) {}
 
     @Override
     default void setAttachment(String key, Object value) {
@@ -75,6 +77,14 @@ public interface Invocation extends org.apache.dubbo.rpc.Invocation {
     }
 
     @Override
+    default void setServiceModel(ServiceModel serviceModel) {}
+
+    @Override
+    default ServiceModel getServiceModel() {
+        return null;
+    }
+
+    @Override
     default Object put(Object key, Object value) {
         return null;
     }
@@ -92,6 +102,16 @@ public interface Invocation extends org.apache.dubbo.rpc.Invocation {
     @Override
     default Map<String, Object> getObjectAttachments() {
         return Collections.emptyMap();
+    }
+
+    @Override
+    default Map<String, Object> copyObjectAttachments() {
+        return new HashMap<>(getObjectAttachments());
+    }
+
+    @Override
+    default void foreachAttachment(Consumer<Map.Entry<String, Object>> consumer) {
+        getObjectAttachments().entrySet().forEach(consumer);
     }
 
     @Override
@@ -118,8 +138,18 @@ public interface Invocation extends org.apache.dubbo.rpc.Invocation {
         }
 
         @Override
+        public String getProtocolServiceKey() {
+            return delegate.getProtocolServiceKey();
+        }
+
+        @Override
         public String getMethodName() {
             return delegate.getMethodName();
+        }
+
+        @Override
+        public String getServiceName() {
+            return null;
         }
 
         @Override
@@ -148,8 +178,19 @@ public interface Invocation extends org.apache.dubbo.rpc.Invocation {
         }
 
         @Override
+        @Transient
         public Invoker<?> getInvoker() {
             return new Invoker.CompatibleInvoker(delegate.getInvoker());
+        }
+
+        @Override
+        public void setServiceModel(ServiceModel serviceModel) {
+            delegate.setServiceModel(serviceModel);
+        }
+
+        @Override
+        public ServiceModel getServiceModel() {
+            return delegate.getServiceModel();
         }
 
         @Override
@@ -170,6 +211,16 @@ public interface Invocation extends org.apache.dubbo.rpc.Invocation {
         @Override
         public org.apache.dubbo.rpc.Invocation getOriginal() {
             return delegate;
+        }
+
+        @Override
+        public void addInvokedInvoker(org.apache.dubbo.rpc.Invoker<?> invoker) {
+            delegate.addInvokedInvoker(invoker);
+        }
+
+        @Override
+        public List<org.apache.dubbo.rpc.Invoker<?>> getInvokedInvokers() {
+            return delegate.getInvokedInvokers();
         }
     }
 }

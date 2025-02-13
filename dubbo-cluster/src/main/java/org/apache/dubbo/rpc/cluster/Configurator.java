@@ -17,7 +17,6 @@
 package org.apache.dubbo.rpc.cluster;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.extension.ExtensionLoader;
 import org.apache.dubbo.common.utils.CollectionUtils;
 
 import java.util.ArrayList;
@@ -52,7 +51,6 @@ public interface Configurator extends Comparable<Configurator> {
      */
     URL configure(URL url);
 
-
     /**
      * Convert override urls to map for use when re-refer. Send all rules every time, the urls will be reassembled and
      * calculated
@@ -74,7 +72,9 @@ public interface Configurator extends Comparable<Configurator> {
             return Optional.empty();
         }
 
-        ConfiguratorFactory configuratorFactory = ExtensionLoader.getExtensionLoader(ConfiguratorFactory.class)
+        ConfiguratorFactory configuratorFactory = urls.get(0)
+                .getOrDefaultApplicationModel()
+                .getExtensionLoader(ConfiguratorFactory.class)
                 .getAdaptiveExtension();
 
         List<Configurator> configurators = new ArrayList<>(urls.size());
@@ -84,7 +84,8 @@ public interface Configurator extends Comparable<Configurator> {
                 break;
             }
             Map<String, String> override = new HashMap<>(url.getParameters());
-            //The anyhost parameter of override may be added automatically, it can't change the judgement of changing url
+            // The anyhost parameter of override may be added automatically, it can't change the judgement of changing
+            // url
             override.remove(ANYHOST_KEY);
             if (CollectionUtils.isEmptyMap(override)) {
                 continue;

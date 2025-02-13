@@ -17,27 +17,20 @@
 package org.apache.dubbo.common.config.configcenter;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.config.configcenter.file.FileSystemDynamicConfiguration;
 import org.apache.dubbo.common.utils.StringUtils;
 
 import java.util.Collection;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
-import static java.util.Collections.emptySortedSet;
-import static java.util.Collections.unmodifiableSortedSet;
-import static org.apache.dubbo.common.config.configcenter.Constants.CONFIG_NAMESPACE_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.CONFIG_NAMESPACE_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.PATH_SEPARATOR;
-import static org.apache.dubbo.common.utils.CollectionUtils.isEmpty;
 import static org.apache.dubbo.common.utils.PathUtils.buildPath;
 import static org.apache.dubbo.common.utils.PathUtils.normalize;
 
 /**
  * An abstract implementation of {@link DynamicConfiguration} is like "tree-structure" path :
  * <ul>
- *     <li>{@link FileSystemDynamicConfiguration "file"}</li>
+ *     <li>{@link org.apache.dubbo.common.config.configcenter.file.FileSystemDynamicConfiguration "file"}</li>
  *     <li>{@link org.apache.dubbo.configcenter.support.zookeeper.ZookeeperDynamicConfiguration "zookeeper"}</li>
- *     <li>{@link org.apache.dubbo.configcenter.consul.ConsulDynamicConfiguration "consul"}</li>
  * </ul>
  *
  * @see DynamicConfiguration
@@ -61,19 +54,20 @@ public abstract class TreePathDynamicConfiguration extends AbstractDynamicConfig
      */
     public static final String DEFAULT_CONFIG_BASE_PATH = "/config";
 
-    private final String rootPath;
+    protected final String rootPath;
 
     public TreePathDynamicConfiguration(URL url) {
         super(url);
         this.rootPath = getRootPath(url);
     }
 
-    public TreePathDynamicConfiguration(String rootPath,
-                                        String threadPoolPrefixName,
-                                        int threadPoolSize,
-                                        long keepAliveTime,
-                                        String group,
-                                        long timeout) {
+    public TreePathDynamicConfiguration(
+            String rootPath,
+            String threadPoolPrefixName,
+            int threadPoolSize,
+            long keepAliveTime,
+            String group,
+            long timeout) {
         super(threadPoolPrefixName, threadPoolSize, keepAliveTime, group, timeout);
         this.rootPath = rootPath;
     }
@@ -87,7 +81,7 @@ public abstract class TreePathDynamicConfiguration extends AbstractDynamicConfig
     @Override
     public final boolean publishConfig(String key, String group, String content) {
         String pathKey = buildPathKey(group, key);
-        return execute(() -> doPublishConfig(pathKey, content), getDefaultTimeout());
+        return Boolean.TRUE.equals(execute(() -> doPublishConfig(pathKey, content), getDefaultTimeout()));
     }
 
     @Override
@@ -99,20 +93,13 @@ public abstract class TreePathDynamicConfiguration extends AbstractDynamicConfig
     @Override
     public final void addListener(String key, String group, ConfigurationListener listener) {
         String pathKey = buildPathKey(group, key);
-        doAddListener(pathKey, listener);
+        doAddListener(pathKey, listener, key, group);
     }
 
     @Override
     public final void removeListener(String key, String group, ConfigurationListener listener) {
         String pathKey = buildPathKey(group, key);
         doRemoveListener(pathKey, listener);
-    }
-
-    @Override
-    public final SortedSet<String> getConfigKeys(String group) throws UnsupportedOperationException {
-        String groupPath = buildGroupPath(group);
-        Collection<String> configKeys = doGetConfigKeys(groupPath);
-        return isEmpty(configKeys) ? emptySortedSet() : unmodifiableSortedSet(new TreeSet<>(configKeys));
     }
 
     protected abstract boolean doPublishConfig(String pathKey, String content) throws Exception;
@@ -123,7 +110,7 @@ public abstract class TreePathDynamicConfiguration extends AbstractDynamicConfig
 
     protected abstract Collection<String> doGetConfigKeys(String groupPath);
 
-    protected abstract void doAddListener(String pathKey, ConfigurationListener listener);
+    protected abstract void doAddListener(String pathKey, ConfigurationListener listener, String key, String group);
 
     protected abstract void doRemoveListener(String pathKey, ConfigurationListener listener);
 

@@ -17,7 +17,7 @@
 package org.apache.dubbo.common.config.configcenter;
 
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.logger.Logger;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
 import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.NamedThreadFactory;
 import org.apache.dubbo.common.utils.StringUtils;
@@ -30,6 +30,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.apache.dubbo.common.constants.CommonConstants.GROUP_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.TIMEOUT_KEY;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.COMMON_UNEXPECTED_EXCEPTION;
 
 /**
  * The abstract implementation of {@link DynamicConfiguration}
@@ -49,7 +50,8 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
     /**
      * The keep alive time in milliseconds for threads in {@link ThreadPoolExecutor}
      */
-    public static final String THREAD_POOL_KEEP_ALIVE_TIME_PARAM_NAME = PARAM_NAME_PREFIX + "thread-pool.keep-alive-time";
+    public static final String THREAD_POOL_KEEP_ALIVE_TIME_PARAM_NAME =
+            PARAM_NAME_PREFIX + "thread-pool.keep-alive-time";
 
     /**
      * The parameter name of group for config-center
@@ -75,10 +77,10 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
     /**
      * Logger
      */
-    protected final Logger logger = LoggerFactory.getLogger(getClass());
+    protected final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(getClass());
 
     /**
-     * The thread pool for workers who executes the tasks
+     * The thread pool for workers who execute the tasks
      */
     private final ThreadPoolExecutor workersThreadPool;
 
@@ -86,28 +88,27 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
 
     private final long timeout;
 
-    public AbstractDynamicConfiguration(URL url) {
-        this(getThreadPoolPrefixName(url), getThreadPoolSize(url), getThreadPoolKeepAliveTime(url), getGroup(url),
+    protected AbstractDynamicConfiguration(URL url) {
+        this(
+                getThreadPoolPrefixName(url),
+                getThreadPoolSize(url),
+                getThreadPoolKeepAliveTime(url),
+                getGroup(url),
                 getTimeout(url));
     }
 
-    public AbstractDynamicConfiguration(String threadPoolPrefixName,
-                                        int threadPoolSize,
-                                        long keepAliveTime,
-                                        String group,
-                                        long timeout) {
+    protected AbstractDynamicConfiguration(
+            String threadPoolPrefixName, int threadPoolSize, long keepAliveTime, String group, long timeout) {
         this.workersThreadPool = initWorkersThreadPool(threadPoolPrefixName, threadPoolSize, keepAliveTime);
         this.group = group;
         this.timeout = timeout;
     }
 
     @Override
-    public void addListener(String key, String group, ConfigurationListener listener) {
-    }
+    public void addListener(String key, String group, ConfigurationListener listener) {}
 
     @Override
-    public void removeListener(String key, String group, ConfigurationListener listener) {
-    }
+    public void removeListener(String key, String group, ConfigurationListener listener) {}
 
     @Override
     public final String getConfig(String key, String group, long timeout) throws IllegalStateException {
@@ -130,7 +131,7 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
 
     @Override
     public boolean removeConfig(String key, String group) {
-        return execute(() -> doRemoveConfig(key, group), -1L);
+        return Boolean.TRUE.equals(execute(() -> doRemoveConfig(key, group), -1L));
     }
 
     /**
@@ -186,10 +187,12 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
      * @param timeout timeout in milliseconds
      */
     protected final void execute(Runnable task, long timeout) {
-        execute(() -> {
-            task.run();
-            return null;
-        }, timeout);
+        execute(
+                () -> {
+                    task.run();
+                    return null;
+                },
+                timeout);
     }
 
     /**
@@ -212,7 +215,7 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
             }
         } catch (Exception e) {
             if (logger.isErrorEnabled()) {
-                logger.error(e.getMessage(), e);
+                logger.error(COMMON_UNEXPECTED_EXCEPTION, "", "", e.getMessage(), e);
             }
         }
         return value;
@@ -232,11 +235,15 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
         }
     }
 
-    protected ThreadPoolExecutor initWorkersThreadPool(String threadPoolPrefixName,
-                                                       int threadPoolSize,
-                                                       long keepAliveTime) {
-        return new ThreadPoolExecutor(threadPoolSize, threadPoolSize, keepAliveTime,
-                TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), new NamedThreadFactory(threadPoolPrefixName, true));
+    protected ThreadPoolExecutor initWorkersThreadPool(
+            String threadPoolPrefixName, int threadPoolSize, long keepAliveTime) {
+        return new ThreadPoolExecutor(
+                threadPoolSize,
+                threadPoolSize,
+                keepAliveTime,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(),
+                new NamedThreadFactory(threadPoolPrefixName, true));
     }
 
     protected static String getThreadPoolPrefixName(URL url) {
@@ -271,7 +278,6 @@ public abstract class AbstractDynamicConfiguration implements DynamicConfigurati
         }
         return defaultValue;
     }
-
 
     protected String getGroup() {
         return group;

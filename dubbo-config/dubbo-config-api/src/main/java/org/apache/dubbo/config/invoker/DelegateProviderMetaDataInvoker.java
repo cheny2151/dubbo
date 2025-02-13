@@ -24,12 +24,11 @@ import org.apache.dubbo.rpc.Result;
 import org.apache.dubbo.rpc.RpcException;
 
 /**
- *
- * A Invoker wrapper that wrap the invoker and all the metadata (ServiceConfig)
+ * An invoker wrapper that wrap the invoker and all the metadata (ServiceConfig)
  */
 public class DelegateProviderMetaDataInvoker<T> implements Invoker {
     protected final Invoker<T> invoker;
-    private ServiceConfig<?> metadata;
+    private final ServiceConfig<?> metadata;
 
     public DelegateProviderMetaDataInvoker(Invoker<T> invoker, ServiceConfig<?> metadata) {
         this.invoker = invoker;

@@ -16,9 +16,13 @@
  */
 package org.apache.dubbo.common.utils;
 
+import org.apache.dubbo.common.constants.CommonConstants;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +34,8 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,15 +43,13 @@ import java.util.List;
  * Miscellaneous io utility methods.
  * Mainly for internal use within the framework.
  *
- * @author william.liangf
  * @since 2.0.7
  */
 public class IOUtils {
     private static final int BUFFER_SIZE = 1024 * 8;
     public static final int EOF = -1;
 
-    private IOUtils() {
-    }
+    private IOUtils() {}
 
     /**
      * write.
@@ -82,7 +86,8 @@ public class IOUtils {
      * @return count.
      * @throws IOException If an I/O error occurs
      */
-    public static long write(final InputStream input, final OutputStream output, final byte[] buffer) throws IOException {
+    public static long write(final InputStream input, final OutputStream output, final byte[] buffer)
+            throws IOException {
         long count = 0;
         int n;
         while (EOF != (n = input.read(buffer))) {
@@ -174,7 +179,7 @@ public class IOUtils {
      * @throws IOException If an I/O error occurs
      */
     public static String[] readLines(InputStream is) throws IOException {
-        List<String> lines = new ArrayList<String>();
+        List<String> lines = new ArrayList<>();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -182,6 +187,18 @@ public class IOUtils {
             }
             return lines.toArray(new String[0]);
         }
+    }
+
+    public static String read(InputStream is, String encoding) throws IOException {
+        StringBuilder stringBuilder = new StringBuilder();
+        InputStreamReader inputStreamReader = new InputStreamReader(is, encoding);
+        char[] buf = new char[1024];
+        int len;
+        while ((len = inputStreamReader.read(buf)) != -1) {
+            stringBuilder.append(buf, 0, len);
+        }
+        inputStreamReader.close();
+        return stringBuilder.toString();
     }
 
     /**
@@ -228,4 +245,46 @@ public class IOUtils {
         writeLines(new FileOutputStream(file, true), lines);
     }
 
+    /**
+     * use like spring code
+     *
+     * @param resourceLocation
+     * @return
+     */
+    public static URL getURL(String resourceLocation) throws FileNotFoundException {
+        Assert.notNull(resourceLocation, "Resource location must not be null");
+        if (resourceLocation.startsWith(CommonConstants.CLASSPATH_URL_PREFIX)) {
+            String path = resourceLocation.substring(CommonConstants.CLASSPATH_URL_PREFIX.length());
+            ClassLoader cl = ClassUtils.getClassLoader();
+            URL url = (cl != null ? cl.getResource(path) : ClassLoader.getSystemResource(path));
+            if (url == null) {
+                String description = "class path resource [" + path + "]";
+                throw new FileNotFoundException(description + " cannot be resolved to URL because it does not exist");
+            }
+            return url;
+        }
+        try {
+            // try URL
+            return new URL(resourceLocation);
+        } catch (MalformedURLException ex) {
+            // no URL -> treat as file path
+            try {
+                return new File(resourceLocation).toURI().toURL();
+            } catch (MalformedURLException ex2) {
+                throw new FileNotFoundException(
+                        "Resource location [" + resourceLocation + "] is neither a URL not a well-formed file path");
+            }
+        }
+    }
+
+    public static byte[] toByteArray(final InputStream inputStream) throws IOException {
+        try (final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[1024];
+            int n;
+            while (-1 != (n = inputStream.read(buffer))) {
+                byteArrayOutputStream.write(buffer, 0, n);
+            }
+            return byteArrayOutputStream.toByteArray();
+        }
+    }
 }

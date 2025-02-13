@@ -20,12 +20,12 @@ import org.apache.dubbo.config.ApplicationConfig;
 import org.apache.dubbo.config.MonitorConfig;
 import org.apache.dubbo.config.RegistryConfig;
 
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Test;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 class ApplicationBuilderTest {
 
@@ -86,8 +86,8 @@ class ApplicationBuilderTest {
     @Test
     void logger() {
         ApplicationBuilder builder = new ApplicationBuilder();
-        builder.logger("log4j");
-        Assertions.assertEquals("log4j", builder.build().getLogger());
+        builder.logger("log4j2");
+        Assertions.assertEquals("log4j2", builder.build().getLogger());
     }
 
     @Test
@@ -214,22 +214,67 @@ class ApplicationBuilderTest {
     }
 
     @Test
+    void metadataServicePort() {
+        ApplicationBuilder builder = new ApplicationBuilder();
+        builder.metadataServicePort(12345);
+        Assertions.assertEquals(12345, builder.build().getMetadataServicePort());
+    }
+
+    @Test
+    void livenessProbe() {
+        ApplicationBuilder builder = new ApplicationBuilder();
+        builder.livenessProbe("TestProbe");
+        Assertions.assertEquals("TestProbe", builder.build().getLivenessProbe());
+    }
+
+    @Test
+    void readinessProbe() {
+        ApplicationBuilder builder = new ApplicationBuilder();
+        builder.readinessProbe("TestProbe");
+        Assertions.assertEquals("TestProbe", builder.build().getReadinessProbe());
+    }
+
+    @Test
+    void startupProbe() {
+        ApplicationBuilder builder = new ApplicationBuilder();
+        builder.startupProbe("TestProbe");
+        Assertions.assertEquals("TestProbe", builder.build().getStartupProbe());
+    }
+
+    @Test
     void build() {
         MonitorConfig monitor = new MonitorConfig("monitor-addr");
         RegistryConfig registry = new RegistryConfig();
 
         ApplicationBuilder builder = new ApplicationBuilder();
-        builder.id("id").prefix("prefix").name("name").version("version").owner("owner").organization("organization").architecture("architecture")
-                .environment("develop").compiler("compiler").logger("log4j").monitor(monitor).isDefault(false)
-                .dumpDirectory("dumpDirectory").qosEnable(true).qosPort(8080).qosAcceptForeignIp(false)
-                .shutwait("shutwait").registryIds("registryIds").addRegistry(registry)
-                .appendParameter("default.num", "one");
+        builder.id("id")
+                .name("name")
+                .version("version")
+                .owner("owner")
+                .organization("organization")
+                .architecture("architecture")
+                .environment("develop")
+                .compiler("compiler")
+                .logger("log4j2")
+                .monitor(monitor)
+                .isDefault(false)
+                .dumpDirectory("dumpDirectory")
+                .qosEnable(true)
+                .qosPort(8080)
+                .qosAcceptForeignIp(false)
+                .shutwait("shutwait")
+                .registryIds("registryIds")
+                .addRegistry(registry)
+                .appendParameter("default.num", "one")
+                .metadataServicePort(12345)
+                .livenessProbe("liveness")
+                .readinessProbe("readiness")
+                .startupProbe("startup");
 
         ApplicationConfig config = builder.build();
         ApplicationConfig config2 = builder.build();
 
         Assertions.assertEquals("id", config.getId());
-        Assertions.assertEquals("prefix", config.getPrefix());
         Assertions.assertEquals("name", config.getName());
         Assertions.assertEquals("version", config.getVersion());
         Assertions.assertEquals("owner", config.getOwner());
@@ -237,7 +282,7 @@ class ApplicationBuilderTest {
         Assertions.assertEquals("architecture", config.getArchitecture());
         Assertions.assertEquals("develop", config.getEnvironment());
         Assertions.assertEquals("compiler", config.getCompiler());
-        Assertions.assertEquals("log4j", config.getLogger());
+        Assertions.assertEquals("log4j2", config.getLogger());
         Assertions.assertSame(monitor, config.getMonitor());
         Assertions.assertFalse(config.isDefault());
         Assertions.assertEquals("dumpDirectory", config.getDumpDirectory());
@@ -249,6 +294,10 @@ class ApplicationBuilderTest {
         Assertions.assertSame(registry, config.getRegistry());
         Assertions.assertTrue(config.getParameters().containsKey("default.num"));
         Assertions.assertEquals("one", config.getParameters().get("default.num"));
+        Assertions.assertEquals(12345, config.getMetadataServicePort());
+        Assertions.assertEquals("liveness", config.getLivenessProbe());
+        Assertions.assertEquals("readiness", config.getReadinessProbe());
+        Assertions.assertEquals("startup", config.getStartupProbe());
 
         Assertions.assertNotSame(config, config2);
     }

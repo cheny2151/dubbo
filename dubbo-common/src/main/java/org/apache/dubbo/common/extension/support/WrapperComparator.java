@@ -16,13 +16,17 @@
  */
 package org.apache.dubbo.common.extension.support;
 
+import org.apache.dubbo.common.compact.Dubbo2ActivateUtils;
+import org.apache.dubbo.common.compact.Dubbo2CompactUtils;
 import org.apache.dubbo.common.extension.Activate;
-import org.apache.dubbo.common.extension.SPI;
+import org.apache.dubbo.common.extension.Wrapper;
 
+import java.lang.annotation.Annotation;
 import java.util.Comparator;
 
 /**
  * OrderComparator
+ * Derived from {@link ActivateComparator}
  */
 public class WrapperComparator implements Comparator<Object> {
 
@@ -46,45 +50,31 @@ public class WrapperComparator implements Comparator<Object> {
         Class clazz1 = (Class) o1;
         Class clazz2 = (Class) o2;
 
-        Class<?> inf = findSpi(clazz1);
-
         OrderInfo a1 = parseOrder(clazz1);
         OrderInfo a2 = parseOrder(clazz2);
 
-        int n1 = a1 == null ? 0 : a1.order;
-        int n2 = a2 == null ? 0 : a2.order;
+        int n1 = a1.order;
+        int n2 = a2.order;
         // never return 0 even if n1 equals n2, otherwise, o1 and o2 will override each other in collection like HashSet
         return n1 > n2 ? 1 : -1;
     }
 
-    private Class<?> findSpi(Class clazz) {
-        if (clazz.getInterfaces().length == 0) {
-            return null;
-        }
-
-        for (Class<?> intf : clazz.getInterfaces()) {
-            if (intf.isAnnotationPresent(SPI.class)) {
-                return intf;
-            } else {
-                Class result = findSpi(intf);
-                if (result != null) {
-                    return result;
-                }
-            }
-        }
-
-        return null;
-    }
-
+    @SuppressWarnings("deprecation")
     private OrderInfo parseOrder(Class<?> clazz) {
         OrderInfo info = new OrderInfo();
         if (clazz.isAnnotationPresent(Activate.class)) {
+            // TODO: backward compatibility
             Activate activate = clazz.getAnnotation(Activate.class);
             info.order = activate.order();
-        } else if (clazz.isAnnotationPresent(com.alibaba.dubbo.common.extension.Activate.class)) {
-            com.alibaba.dubbo.common.extension.Activate activate = clazz.getAnnotation(
-                    com.alibaba.dubbo.common.extension.Activate.class);
-            info.order = activate.order();
+        } else if (Dubbo2CompactUtils.isEnabled()
+                && Dubbo2ActivateUtils.isActivateLoaded()
+                && clazz.isAnnotationPresent(Dubbo2ActivateUtils.getActivateClass())) {
+            // TODO: backward compatibility
+            Annotation activate = clazz.getAnnotation(Dubbo2ActivateUtils.getActivateClass());
+            info.order = Dubbo2ActivateUtils.getOrder(activate);
+        } else if (clazz.isAnnotationPresent(Wrapper.class)) {
+            Wrapper wrapper = clazz.getAnnotation(Wrapper.class);
+            info.order = wrapper.order();
         }
         return info;
     }

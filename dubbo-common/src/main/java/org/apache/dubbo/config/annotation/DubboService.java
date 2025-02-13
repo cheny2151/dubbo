@@ -16,6 +16,8 @@
  */
 package org.apache.dubbo.config.annotation;
 
+import org.apache.dubbo.common.constants.ClusterRules;
+import org.apache.dubbo.common.constants.LoadbalanceRules;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
@@ -24,17 +26,41 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_LOADBALANCE;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_RETRIES;
-
 /**
- * Class-level annotation used for declaring Dubbo service
+ * Class-level annotation used for declaring Dubbo service.
+ * <p/>
+ * <b>1. Using with java config bean:</b>
+ * <p/>
+ * <b>This usage is recommended</b>.<br/>
+ * It is more flexible on bean methods than on implementation classes, and is more compatible with Spring.
+ * <pre>
+ * &#64;Configuration
+ * class ProviderConfiguration {
+ *
+ *     &#64;Bean
+ *     &#64;DubboService(group="demo")
+ *     public DemoService demoServiceImpl() {
+ *         return new DemoServiceImpl();
+ *     }
+ * }
+ * </pre>
+ *
+ * <b>2. Using on implementation class of service:  </b>
+ * <pre>
+ * &#64;DubboService(group="demo")
+ * public class DemoServiceImpl implements DemoService {
+ *     ...
+ * }
+ * </pre>
+ *
+ * This usage causes the implementation class to rely on the Dubbo module.
+ *
  *
  * @since 2.7.7
  */
 @Documented
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
+@Target({ElementType.TYPE, ElementType.METHOD})
 @Inherited
 public @interface DubboService {
 
@@ -69,7 +95,7 @@ public @interface DubboService {
     boolean export() default true;
 
     /**
-     * Service token, default value is false
+     * Service token, default value is empty string
      */
     String token() default "";
 
@@ -84,14 +110,14 @@ public @interface DubboService {
     boolean dynamic() default true;
 
     /**
-     * Access log for the service, default value is ""
+     * Access log for the service, default value is empty string
      */
     String accesslog() default "";
 
     /**
-     * Maximum concurrent executes for the service, default value is 0 - no limits
+     * Maximum concurrent executes for the service, default value is -1 - no limits
      */
-    int executes() default 0;
+    int executes() default -1;
 
     /**
      * Whether to register the service to register center, default value is true
@@ -99,19 +125,19 @@ public @interface DubboService {
     boolean register() default true;
 
     /**
-     * Service weight value, default value is 0
+     * Service weight value, default value is -1
      */
-    int weight() default 0;
+    int weight() default -1;
 
     /**
-     * Service doc, default value is ""
+     * Service doc, default value is empty string
      */
     String document() default "";
 
     /**
-     * Delay time for service registration, default value is 0
+     * Delay time for service registration, default value is -1
      */
-    int delay() default 0;
+    int delay() default -1;
 
     /**
      * @see DubboService#stub()
@@ -126,8 +152,9 @@ public @interface DubboService {
 
     /**
      * Cluster strategy, legal values include: failover, failfast, failsafe, failback, forking
+     * you can use {@link org.apache.dubbo.common.constants.ClusterRules#FAIL_FAST} ……
      */
-    String cluster() default "";
+    String cluster() default ClusterRules.EMPTY;
 
     /**
      * How the proxy is generated, legal values include: jdk, javassist
@@ -135,16 +162,16 @@ public @interface DubboService {
     String proxy() default "";
 
     /**
-     * Maximum connections service provider can accept, default value is 0 - connection is shared
+     * Maximum connections service provider can accept, default value is -1 - connection is shared
      */
-    int connections() default 0;
+    int connections() default -1;
 
     /**
      * The callback instance limit peer connection
      * <p>
-     * see org.apache.dubbo.rpc.Constants#DEFAULT_CALLBACK_INSTANCES
+     * see org.apache.dubbo.common.constants.CommonConstants.DEFAULT_CALLBACK_INSTANCES
      */
-    int callbacks() default org.apache.dubbo.common.constants.CommonConstants.DEFAULT_CALLBACK_INSTANCES;
+    int callbacks() default -1;
 
     /**
      * Callback method name when connected, default value is empty string
@@ -171,14 +198,14 @@ public @interface DubboService {
      *
      * @see org.apache.dubbo.common.constants.CommonConstants#DEFAULT_RETRIES
      */
-    int retries() default DEFAULT_RETRIES;
+    int retries() default -1;
 
     /**
      * Load balance strategy, legal values include: random, roundrobin, leastactive
      *
-     * @see org.apache.dubbo.common.constants.CommonConstants#DEFAULT_LOADBALANCE
+     * you can use {@link org.apache.dubbo.common.constants.LoadbalanceRules#RANDOM} ……
      */
-    String loadbalance() default DEFAULT_LOADBALANCE;
+    String loadbalance() default LoadbalanceRules.EMPTY;
 
     /**
      * Whether to enable async invocation, default value is false
@@ -186,9 +213,9 @@ public @interface DubboService {
     boolean async() default false;
 
     /**
-     * Maximum active requests allowed, default value is 0
+     * Maximum active requests allowed, default value is -1
      */
-    int actives() default 0;
+    int actives() default -1;
 
     /**
      * Whether the async request has already been sent, the default value is false
@@ -206,9 +233,9 @@ public @interface DubboService {
     String validation() default "";
 
     /**
-     * Timeout value for service invocation, default value is 0
+     * Timeout value for service invocation, default value is -1
      */
-    int timeout() default 0;
+    int timeout() default -1;
 
     /**
      * Specify cache implementation for service invocation, legal values include: lru, threadlocal, jcache
@@ -230,13 +257,25 @@ public @interface DubboService {
     String[] listener() default {};
 
     /**
-     * Customized parameter key-value pair, for example: {key1, value1, key2, value2}
+     * Customized parameter key-value pair, for example:
+     * <pre>
+     *  ["a","b"] ==> {a=b}
+     *  [" a "," b "] ==> {a=b}
+     *  ["a=b"] ==>{a=b}
+     *  ["a:b"] ==>{a=b}
+     *  ["a=b","c","d"] ==>{a=b,c=d}
+     *  ["a","a:b"] ==>{a="a:b"}
+     *  ["a","a,b"] ==>{a="a,b"}
+     * </pre>
+     * @see org.apache.dubbo.config.spring.util.DubboAnnotationUtils#convertParameters(java.lang.String[])
      */
     String[] parameters() default {};
 
     /**
      * Application spring bean name
+     * @deprecated This attribute was deprecated, use bind application/module of spring ApplicationContext
      */
+    @Deprecated
     String application() default "";
 
     /**
@@ -275,4 +314,44 @@ public @interface DubboService {
      * @return
      */
     Method[] methods() default {};
+
+    /**
+     * the scope for referring/exporting a service, if it's local, it means searching in current JVM only.
+     * @see org.apache.dubbo.rpc.Constants#SCOPE_LOCAL
+     * @see org.apache.dubbo.rpc.Constants#SCOPE_REMOTE
+     */
+    String scope() default "";
+
+    /**
+     * Weather the service is export asynchronously
+     */
+    boolean exportAsync() default false;
+
+    /**
+     * bean name of service executor(thread pool), used for thread pool isolation between services
+     * @return
+     */
+    String executor() default "";
+
+    /**
+     * Payload max length.
+     */
+    String payload() default "";
+
+    /**
+     * The serialization type
+     */
+    String serialization() default "";
+
+    /**
+     * If the parameter has a value, the consumer will read the parameter first.
+     * If the Dubbo Sdk you are using contains the serialization type, the serialization method specified by the argument is used.
+     * <p>
+     * When this parameter is null or the serialization type specified by this parameter does not exist in the Dubbo SDK, the serialization type specified by serialization is used.
+     * If the Dubbo SDK if still does not exist, the default type of the Dubbo SDK is used.
+     * For Dubbo SDK >= 3.2, <code>preferSerialization</code> takes precedence over <code>serialization</code>
+     * <p>
+     * The configuration supports multiple, which are separated by commas.Such as:<code>fastjson2,fastjson,hessian2</code>
+     */
+    String preferSerialization() default "";
 }

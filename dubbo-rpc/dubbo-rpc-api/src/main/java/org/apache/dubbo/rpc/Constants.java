@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dubbo.rpc;
 
 public interface Constants {
@@ -55,11 +54,15 @@ public interface Constants {
 
     String STUB_EVENT_METHODS_KEY = "dubbo.stub.event.methods";
 
+    String COMPRESSOR_KEY = "dubbo.rpc.tri.compressor";
+
     String PROXY_KEY = "proxy";
 
     String EXECUTES_KEY = "executes";
 
     String ACCESS_LOG_KEY = "accesslog";
+
+    String ACCESS_LOG_FIXED_PATH_KEY = "accesslog.fixed.path";
 
     String ACTIVES_KEY = "actives";
 
@@ -70,6 +73,10 @@ public interface Constants {
     String RETURN_KEY = "return";
 
     String TOKEN_KEY = "token";
+
+    String AUTH_KEY = "auth";
+
+    String AUTHENTICATOR_KEY = "authenticator";
 
     String INTERFACE = "interface";
 
@@ -90,4 +97,28 @@ public interface Constants {
 
     String CONSUMER_MODEL = "consumerModel";
     String METHOD_MODEL = "methodModel";
+
+    String INVOCATION_KEY = "invocation";
+    String SERIALIZATION_ID_KEY = "serialization_id";
+
+    String HTTP3_KEY = "http3";
+
+    String H2_SETTINGS_SUPPORT_NO_LOWER_HEADER_KEY = "dubbo.rpc.tri.support-no-lower-header";
+    String H2_SETTINGS_IGNORE_1_0_0_KEY = "dubbo.rpc.tri.ignore-1.0.0-version";
+    String H2_SETTINGS_RESOLVE_FALLBACK_TO_DEFAULT_KEY = "dubbo.rpc.tri.resolve-fallback-to-default";
+    String H2_SETTINGS_BUILTIN_SERVICE_INIT = "dubbo.tri.builtin.service.init";
+
+    String H2_SETTINGS_JSON_FRAMEWORK_NAME = "dubbo.protocol.triple.rest.json-framework";
+    String H2_SETTINGS_DISALLOWED_CONTENT_TYPES = "dubbo.protocol.triple.rest.disallowed-content-types";
+    String H2_SETTINGS_OPENAPI_PREFIX = "dubbo.protocol.triple.rest.openapi";
+
+    String H2_SETTINGS_VERBOSE_ENABLED = "dubbo.protocol.triple.verbose";
+    String H2_SETTINGS_REST_ENABLED = "dubbo.protocol.triple.rest.enabled";
+    String H2_SETTINGS_OPENAPI_ENABLED = "dubbo.protocol.triple.rest.openapi.enabled";
+    String H2_SETTINGS_SERVLET_ENABLED = "dubbo.protocol.triple.servlet.enabled";
+    String H3_SETTINGS_HTTP3_ENABLED = "dubbo.protocol.triple.http3.enabled";
+    String H3_SETTINGS_HTTP3_NEGOTIATION = "dubbo.protocol.triple.http3.negotiation";
+
+    String ADAPTIVE_LOADBALANCE_ATTACHMENT_KEY = "lb_adaptive";
+    String ADAPTIVE_LOADBALANCE_START_TIME = "adaptive_startTime";
 }

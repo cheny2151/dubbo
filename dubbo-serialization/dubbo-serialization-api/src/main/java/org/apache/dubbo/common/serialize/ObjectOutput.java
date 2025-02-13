@@ -45,16 +45,15 @@ public interface ObjectOutput extends DataOutput {
      * restricting the content of headers / attachments to Ascii strings and uses ISO_8859_1 to encode them.
      * https://tools.ietf.org/html/rfc7540#section-8.1.2
      */
-    default void writeThrowable(Object obj) throws IOException {
+    default void writeThrowable(Throwable obj) throws IOException {
         writeObject(obj);
     }
 
-    default void writeEvent(Object data) throws IOException {
+    default void writeEvent(String data) throws IOException {
         writeObject(data);
     }
 
     default void writeAttachments(Map<String, Object> attachments) throws IOException {
         writeObject(attachments);
     }
-
 }

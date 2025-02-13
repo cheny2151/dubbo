@@ -16,7 +16,7 @@
  */
 package org.apache.dubbo.common.serialize.support;
 
-import java.util.LinkedHashMap;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -25,8 +25,7 @@ import java.util.Map;
  */
 public abstract class SerializableClassRegistry {
 
-
-    private static final Map<Class<?>, Object> REGISTRATIONS = new LinkedHashMap<>();
+    private static final Map<Class<?>, Object> REGISTRATIONS = new HashMap<>();
 
     /**
      * only supposed to be called at startup time

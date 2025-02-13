@@ -16,84 +16,117 @@
  */
 package org.apache.dubbo.config;
 
+import org.apache.dubbo.config.context.ModuleConfigManager;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ApplicationModel;
+import org.apache.dubbo.rpc.model.ModuleModel;
+import org.apache.dubbo.rpc.model.ScopeModel;
 
+import java.beans.Transient;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * AbstractMethodConfig
+ * Abstract configuration for the method.
  *
  * @export
  */
 public abstract class AbstractMethodConfig extends AbstractConfig {
 
-    private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 5809761483000878437L;
 
     /**
-     * The timeout for remote invocation in milliseconds
+     * Timeout for remote invocation in milliseconds.
      */
     protected Integer timeout;
 
     /**
-     * The retry times
+     * Retry times for failed invocations.
      */
     protected Integer retries;
 
     /**
-     * max concurrent invocations
+     * Maximum concurrent invocations allowed.
      */
     protected Integer actives;
 
     /**
-     * The load balance
+     * Load balancing strategy for service invocation.
      */
     protected String loadbalance;
 
     /**
-     * Whether to async
-     * note that: it is an unreliable asynchronism that ignores return values and does not block threads.
+     * Enable asynchronous invocation. Note that it is unreliable asynchronous, ignoring return values and not blocking threads.
      */
     protected Boolean async;
 
     /**
-     * Whether to ack async-sent
+     * Acknowledge asynchronous-sent invocations.
      */
     protected Boolean sent;
 
     /**
-     * The name of mock class which gets called when a service fails to execute
-     * <p>
-     * note that: the mock doesn't support on the provider side，and the mock is executed when a non-business exception
-     * occurs after a remote service call
+     * Mock class name to be called when a service fails to execute. The mock doesn't support on the provider side,
+     * and it is executed when a non-business exception occurs after a remote service call.
      */
     protected String mock;
 
     /**
-     * Merger
+     * Merger for result data.
      */
     protected String merger;
 
     /**
-     * Cache the return result with the call parameter as key, the following options are available: lru, threadlocal,
-     * jcache, etc.
+     * Cache provider for caching return results. available options: lru, threadlocal, jcache etc.
      */
     protected String cache;
 
     /**
-     * Whether JSR303 standard annotation validation is enabled or not, if enabled, annotations on method parameters will
-     * be validated
+     * Enable JSR303 standard annotation validation for method parameters.
      */
     protected String validation;
 
     /**
-     * The customized parameters
+     * Customized parameters for configuration.
      */
     protected Map<String, String> parameters;
 
     /**
-     * Forks for forking cluster
+     * Forks for forking cluster.
      */
     protected Integer forks;
+
+    public AbstractMethodConfig() {}
+
+    public AbstractMethodConfig(ModuleModel moduleModel) {
+        super(moduleModel);
+    }
+
+    @Override
+    @Transient
+    public ModuleModel getScopeModel() {
+        return (ModuleModel) super.getScopeModel();
+    }
+
+    @Override
+    @Transient
+    protected ScopeModel getDefaultModel() {
+        return ApplicationModel.defaultModel().getDefaultModule();
+    }
+
+    @Override
+    protected void checkScopeModel(ScopeModel scopeModel) {
+        if (!(scopeModel instanceof ModuleModel)) {
+            throw new IllegalArgumentException(
+                    "Invalid scope model, expect to be a ModuleModel but got: " + scopeModel);
+        }
+    }
+
+    @Transient
+    protected ModuleConfigManager getModuleConfigManager() {
+        return getScopeModel().getConfigManager();
+    }
 
     public Integer getForks() {
         return forks;
@@ -165,7 +198,9 @@ public abstract class AbstractMethodConfig extends AbstractConfig {
      *
      * @param mock the value of mock
      * @since 2.7.6
+     * @deprecated use {@link #setMock(String)} instead
      */
+    @Deprecated
     public void setMock(Object mock) {
         if (mock == null) {
             return;
@@ -198,11 +233,11 @@ public abstract class AbstractMethodConfig extends AbstractConfig {
     }
 
     public Map<String, String> getParameters() {
-        return parameters;
+        this.parameters = Optional.ofNullable(this.parameters).orElseGet(HashMap::new);
+        return this.parameters;
     }
 
     public void setParameters(Map<String, String> parameters) {
         this.parameters = parameters;
     }
-
 }

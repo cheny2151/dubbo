@@ -17,12 +17,16 @@
 package org.apache.dubbo.config;
 
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ModuleModel;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 
+import static org.apache.dubbo.common.constants.CommonConstants.EXPORT_BACKGROUND_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.EXPORT_THREAD_NUM_KEY;
+
 /**
- * The service provider default configuration
+ * Configuration for the service provider.
  *
  * @export
  * @see org.apache.dubbo.config.ProtocolConfig
@@ -32,141 +36,150 @@ public class ProviderConfig extends AbstractServiceConfig {
 
     private static final long serialVersionUID = 6913423882496634749L;
 
-    // ======== protocol default values, it'll take effect when protocol's attributes are not set ========
+    /* ======== Default values for protocols, which take effect when protocol attributes are not set ======== */
 
     /**
-     * Service ip addresses (used when there are multiple network cards available)
+     * The IP addresses of the service (used when there are multiple network cards available).
      */
     private String host;
 
     /**
-     * Service port
+     * The port of the service.
      */
     private Integer port;
 
     /**
-     * Context path
+     * The context path of the service.
      */
     private String contextpath;
 
     /**
-     * Thread pool
+     * The thread pool configuration.
      */
     private String threadpool;
 
     /**
-     * Thread pool name
+     * The name of the thread pool.
      */
     private String threadname;
 
     /**
-     * Thread pool size (fixed size)
+     * The size of the thread pool (fixed size).
      */
     private Integer threads;
 
     /**
-     * IO thread pool size (fixed size)
+     * The size of the I/O thread pool (fixed size).
      */
     private Integer iothreads;
 
     /**
-     * Thread pool queue length
+     * The keep-alive time of the thread pool, default unit: TimeUnit.MILLISECONDS.
+     */
+    private Integer alive;
+
+    /**
+     * The length of the thread pool queue.
      */
     private Integer queues;
 
     /**
-     * Max acceptable connections
+     * The maximum number of acceptable connections.
      */
     private Integer accepts;
 
     /**
-     * Protocol codec
+     * The codec used by the protocol.
      */
     private String codec;
 
     /**
-     * The serialization charset
+     * The charset used for serialization.
      */
     private String charset;
 
     /**
-     * Payload max length
+     * The maximum payload length.
      */
     private Integer payload;
 
     /**
-     * The network io buffer size
+     * The size of the network I/O buffer.
      */
     private Integer buffer;
 
     /**
-     * Transporter
+     * The transporter used by the protocol.
      */
     private String transporter;
 
     /**
-     * How information gets exchanged
+     * The method of information exchange.
      */
     private String exchanger;
 
     /**
-     * Thread dispatching mode
+     * The mode of thread dispatching.
      */
     private String dispatcher;
 
     /**
-     * Networker
+     * The networker used by the protocol.
      */
     private String networker;
 
     /**
-     * The server-side implementation model of the protocol
+     * The server-side implementation model of the protocol.
      */
     private String server;
 
     /**
-     * The client-side implementation model of the protocol
+     * The client-side implementation model of the protocol.
      */
     private String client;
 
     /**
-     * Supported telnet commands, separated with comma.
+     * Supported telnet commands, separated by commas.
      */
     private String telnet;
 
     /**
-     * Command line prompt
+     * The command line prompt.
      */
     private String prompt;
 
     /**
-     * Status check
+     * The status check configuration.
      */
     private String status;
 
     /**
-     * Wait time when stop
+     * The wait time when stopping the service.
      */
     private Integer wait;
 
     /**
-     * Whether to use the default protocol
+     * The number of threads for the asynchronous export pool.
      */
-    private Boolean isDefault;
+    private Integer exportThreadNum;
+
+    /**
+     * Whether the export should run in the background or not.
+     *
+     * @deprecated Replace with {@link ModuleConfig#setBackground(Boolean)}
+     * @see ModuleConfig#setBackground(Boolean)
+     */
+    private Boolean exportBackground;
+
+    public ProviderConfig() {}
+
+    public ProviderConfig(ModuleModel moduleModel) {
+        super(moduleModel);
+    }
 
     @Deprecated
     public void setProtocol(String protocol) {
         this.protocols = new ArrayList<>(Arrays.asList(new ProtocolConfig(protocol)));
-    }
-
-    @Parameter(excluded = true)
-    public Boolean isDefault() {
-        return isDefault;
-    }
-
-    @Deprecated
-    public void setDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
     }
 
     @Parameter(excluded = true)
@@ -189,7 +202,7 @@ public class ProviderConfig extends AbstractServiceConfig {
     }
 
     @Deprecated
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public String getPath() {
         return getContextpath();
     }
@@ -238,6 +251,14 @@ public class ProviderConfig extends AbstractServiceConfig {
 
     public void setIothreads(Integer iothreads) {
         this.iothreads = iothreads;
+    }
+
+    public Integer getAlive() {
+        return alive;
+    }
+
+    public void setAlive(Integer alive) {
+        this.alive = alive;
     }
 
     public Integer getQueues() {
@@ -329,41 +350,6 @@ public class ProviderConfig extends AbstractServiceConfig {
         this.status = status;
     }
 
-    @Override
-    public String getCluster() {
-        return super.getCluster();
-    }
-
-    @Override
-    public Integer getConnections() {
-        return super.getConnections();
-    }
-
-    @Override
-    public Integer getTimeout() {
-        return super.getTimeout();
-    }
-
-    @Override
-    public Integer getRetries() {
-        return super.getRetries();
-    }
-
-    @Override
-    public String getLoadbalance() {
-        return super.getLoadbalance();
-    }
-
-    @Override
-    public Boolean isAsync() {
-        return super.isAsync();
-    }
-
-    @Override
-    public Integer getActives() {
-        return super.getActives();
-    }
-
     public String getTransporter() {
         return transporter;
     }
@@ -386,7 +372,7 @@ public class ProviderConfig extends AbstractServiceConfig {
      * @deprecated {@link #getDispatcher()}
      */
     @Deprecated
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public String getDispather() {
         return getDispatcher();
     }
@@ -425,4 +411,35 @@ public class ProviderConfig extends AbstractServiceConfig {
         this.wait = wait;
     }
 
+    @Deprecated
+    @Parameter(key = EXPORT_THREAD_NUM_KEY, excluded = true)
+    public Integer getExportThreadNum() {
+        return exportThreadNum;
+    }
+
+    @Deprecated
+    public void setExportThreadNum(Integer exportThreadNum) {
+        this.exportThreadNum = exportThreadNum;
+    }
+
+    /**
+     * @deprecated replace with {@link ModuleConfig#getBackground()}
+     * @see ModuleConfig#getBackground()
+     */
+    @Deprecated
+    @Parameter(key = EXPORT_BACKGROUND_KEY, excluded = true)
+    public Boolean getExportBackground() {
+        return exportBackground;
+    }
+
+    /**
+     * Whether export should run in background or not.
+     *
+     * @deprecated replace with {@link ModuleConfig#setBackground(Boolean)}
+     * @see ModuleConfig#setBackground(Boolean)
+     */
+    @Deprecated
+    public void setExportBackground(Boolean exportBackground) {
+        this.exportBackground = exportBackground;
+    }
 }

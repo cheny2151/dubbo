@@ -17,13 +17,11 @@
 package org.apache.dubbo.rpc.cluster.loadbalance;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.io.Bytes;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.support.RpcUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -48,7 +46,7 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
      */
     public static final String HASH_ARGUMENTS = "hash.arguments";
 
-    private final ConcurrentMap<String, ConsistentHashSelector<?>> selectors = new ConcurrentHashMap<String, ConsistentHashSelector<?>>();
+    private final ConcurrentMap<String, ConsistentHashSelector<?>> selectors = new ConcurrentHashMap<>();
 
     @SuppressWarnings("unchecked")
     @Override
@@ -76,7 +74,7 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         private final int[] argumentIndex;
 
         ConsistentHashSelector(List<Invoker<T>> invokers, String methodName, int identityHashCode) {
-            this.virtualInvokers = new TreeMap<Long, Invoker<T>>();
+            this.virtualInvokers = new TreeMap<>();
             this.identityHashCode = identityHashCode;
             URL url = invokers.get(0).getUrl();
             this.replicaNumber = url.getMethodParameter(methodName, HASH_NODES, 160);
@@ -88,7 +86,7 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
             for (Invoker<T> invoker : invokers) {
                 String address = invoker.getUrl().getAddress();
                 for (int i = 0; i < replicaNumber / 4; i++) {
-                    byte[] digest = md5(address + i);
+                    byte[] digest = Bytes.getMD5(address + i);
                     for (int h = 0; h < 4; h++) {
                         long m = hash(digest, h);
                         virtualInvokers.put(m, invoker);
@@ -98,15 +96,16 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
         }
 
         public Invoker<T> select(Invocation invocation) {
-            String key = toKey(invocation.getArguments());
-            byte[] digest = md5(key);
+            String key = toKey(RpcUtils.getArguments(invocation));
+
+            byte[] digest = Bytes.getMD5(key);
             return selectForKey(hash(digest, 0));
         }
 
         private String toKey(Object[] args) {
             StringBuilder buf = new StringBuilder();
             for (int i : argumentIndex) {
-                if (i >= 0 && i < args.length) {
+                if (i >= 0 && args != null && i < args.length) {
                     buf.append(args[i]);
                 }
             }
@@ -123,25 +122,10 @@ public class ConsistentHashLoadBalance extends AbstractLoadBalance {
 
         private long hash(byte[] digest, int number) {
             return (((long) (digest[3 + number * 4] & 0xFF) << 24)
-                    | ((long) (digest[2 + number * 4] & 0xFF) << 16)
-                    | ((long) (digest[1 + number * 4] & 0xFF) << 8)
-                    | (digest[number * 4] & 0xFF))
+                            | ((long) (digest[2 + number * 4] & 0xFF) << 16)
+                            | ((long) (digest[1 + number * 4] & 0xFF) << 8)
+                            | (digest[number * 4] & 0xFF))
                     & 0xFFFFFFFFL;
         }
-
-        private byte[] md5(String value) {
-            MessageDigest md5;
-            try {
-                md5 = MessageDigest.getInstance("MD5");
-            } catch (NoSuchAlgorithmException e) {
-                throw new IllegalStateException(e.getMessage(), e);
-            }
-            md5.reset();
-            byte[] bytes = value.getBytes(StandardCharsets.UTF_8);
-            md5.update(bytes);
-            return md5.digest();
-        }
-
     }
-
 }

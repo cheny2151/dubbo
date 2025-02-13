@@ -25,7 +25,7 @@ public class GroupServiceKeyCache {
 
     private final String serviceGroup;
 
-    //ConcurrentMap<serviceName, ConcurrentMap<serviceVersion, ConcurrentMap<port, String>>>
+    // ConcurrentMap<serviceName, ConcurrentMap<serviceVersion, ConcurrentMap<port, String>>>
     private final ConcurrentMap<String, ConcurrentMap<String, ConcurrentMap<Integer, String>>> serviceKeyMap;
 
     public GroupServiceKeyCache(String serviceGroup) {
@@ -62,7 +62,7 @@ public class GroupServiceKeyCache {
         }
 
         buf.append(serviceName);
-        if (StringUtils.isNotEmpty(serviceVersion) && !"0.0.0".equals(serviceVersion)) {
+        if (StringUtils.isNotEmpty(serviceVersion) && !"0.0.0".equals(serviceVersion) && !"*".equals(serviceVersion)) {
             buf.append(':').append(serviceVersion);
         }
         buf.append(':').append(port);

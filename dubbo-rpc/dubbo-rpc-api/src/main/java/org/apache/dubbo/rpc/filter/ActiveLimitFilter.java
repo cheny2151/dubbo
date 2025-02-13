@@ -24,6 +24,7 @@ import org.apache.dubbo.rpc.Invoker;
 import org.apache.dubbo.rpc.Result;
 import org.apache.dubbo.rpc.RpcException;
 import org.apache.dubbo.rpc.RpcStatus;
+import org.apache.dubbo.rpc.support.RpcUtils;
 
 import static org.apache.dubbo.common.constants.CommonConstants.CONSUMER;
 import static org.apache.dubbo.common.constants.CommonConstants.TIMEOUT_KEY;
@@ -44,16 +45,16 @@ import static org.apache.dubbo.rpc.Constants.ACTIVES_KEY;
 @Activate(group = CONSUMER, value = ACTIVES_KEY)
 public class ActiveLimitFilter implements Filter, Filter.Listener {
 
-    private static final String ACTIVELIMIT_FILTER_START_TIME = "activelimit_filter_start_time";
+    private static final String ACTIVE_LIMIT_FILTER_START_TIME = "active_limit_filter_start_time";
 
     @Override
     public Result invoke(Invoker<?> invoker, Invocation invocation) throws RpcException {
         URL url = invoker.getUrl();
-        String methodName = invocation.getMethodName();
+        String methodName = RpcUtils.getMethodName(invocation);
         int max = invoker.getUrl().getMethodParameter(methodName, ACTIVES_KEY, 0);
-        final RpcStatus rpcStatus = RpcStatus.getStatus(invoker.getUrl(), invocation.getMethodName());
+        final RpcStatus rpcStatus = RpcStatus.getStatus(invoker.getUrl(), RpcUtils.getMethodName(invocation));
         if (!RpcStatus.beginCount(url, methodName, max)) {
-            long timeout = invoker.getUrl().getMethodParameter(invocation.getMethodName(), TIMEOUT_KEY, 0);
+            long timeout = invoker.getUrl().getMethodParameter(RpcUtils.getMethodName(invocation), TIMEOUT_KEY, 0);
             long start = System.currentTimeMillis();
             long remain = timeout;
             synchronized (rpcStatus) {
@@ -66,24 +67,27 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
                     long elapsed = System.currentTimeMillis() - start;
                     remain = timeout - elapsed;
                     if (remain <= 0) {
-                        throw new RpcException(RpcException.LIMIT_EXCEEDED_EXCEPTION,
-                                "Waiting concurrent invoke timeout in client-side for service:  " +
-                                        invoker.getInterface().getName() + ", method: " + invocation.getMethodName() +
-                                        ", elapsed: " + elapsed + ", timeout: " + timeout + ". concurrent invokes: " +
-                                        rpcStatus.getActive() + ". max concurrent invoke limit: " + max);
+                        throw new RpcException(
+                                RpcException.LIMIT_EXCEEDED_EXCEPTION,
+                                "Waiting concurrent invoke timeout in client-side for service:  "
+                                        + invoker.getInterface().getName()
+                                        + ", method: " + RpcUtils.getMethodName(invocation) + ", elapsed: "
+                                        + elapsed + ", timeout: " + timeout + ". concurrent invokes: "
+                                        + rpcStatus.getActive()
+                                        + ". max concurrent invoke limit: " + max);
                     }
                 }
             }
         }
 
-        invocation.put(ACTIVELIMIT_FILTER_START_TIME, System.currentTimeMillis());
+        invocation.put(ACTIVE_LIMIT_FILTER_START_TIME, System.currentTimeMillis());
 
         return invoker.invoke(invocation);
     }
 
     @Override
     public void onResponse(Result appResponse, Invoker<?> invoker, Invocation invocation) {
-        String methodName = invocation.getMethodName();
+        String methodName = RpcUtils.getMethodName(invocation);
         URL url = invoker.getUrl();
         int max = invoker.getUrl().getMethodParameter(methodName, ACTIVES_KEY, 0);
 
@@ -93,7 +97,7 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
 
     @Override
     public void onError(Throwable t, Invoker<?> invoker, Invocation invocation) {
-        String methodName = invocation.getMethodName();
+        String methodName = RpcUtils.getMethodName(invocation);
         URL url = invoker.getUrl();
         int max = invoker.getUrl().getMethodParameter(methodName, ACTIVES_KEY, 0);
 
@@ -108,7 +112,7 @@ public class ActiveLimitFilter implements Filter, Filter.Listener {
     }
 
     private long getElapsed(Invocation invocation) {
-        Object beginTime = invocation.get(ACTIVELIMIT_FILTER_START_TIME);
+        Object beginTime = invocation.get(ACTIVE_LIMIT_FILTER_START_TIME);
         return beginTime != null ? System.currentTimeMillis() - (Long) beginTime : 0;
     }
 

@@ -38,8 +38,7 @@ public class TraceTelnetHandler implements TelnetHandler {
     @Override
     public String telnet(Channel channel, String message) {
         String service = (String) channel.getAttribute(ChangeTelnetHandler.SERVICE_KEY);
-        if ((service == null || service.length() == 0)
-                && (message == null || message.length() == 0)) {
+        if ((StringUtils.isEmpty(service)) && (StringUtils.isEmpty(message))) {
             return "Please input service name, eg: \r\ntrace XxxService\r\ntrace XxxService xxxMethod\r\ntrace XxxService xxxMethod 10\r\nor \"cd XxxService\" firstly.";
         }
         String[] parts = message.split("\\s+");
@@ -50,15 +49,15 @@ public class TraceTelnetHandler implements TelnetHandler {
             service = parts.length > 0 ? parts[0] : null;
             method = parts.length > 1 ? parts[1] : null;
             times = parts.length > 2 ? parts[2] : "1";
-        } else {  //message like : xxxMethod, xxxMethod 10
+        } else { // message like : xxxMethod, xxxMethod 10
             method = parts.length > 0 ? parts[0] : null;
             times = parts.length > 1 ? parts[1] : "1";
         }
-        if (StringUtils.isInteger(method)) {
+        if (StringUtils.isNumber(method)) {
             times = method;
             method = null;
         }
-        if (!StringUtils.isInteger(times)) {
+        if (!StringUtils.isNumber(times)) {
             return "Illegal times " + times + ", must be integer.";
         }
         Invoker<?> invoker = null;
@@ -71,7 +70,7 @@ public class TraceTelnetHandler implements TelnetHandler {
             }
         }
         if (invoker != null) {
-            if (method != null && method.length() > 0) {
+            if (StringUtils.isNotEmpty(method)) {
                 boolean found = false;
                 for (Method m : invoker.getInterface().getMethods()) {
                     if (m.getName().equals(method)) {
@@ -80,7 +79,8 @@ public class TraceTelnetHandler implements TelnetHandler {
                     }
                 }
                 if (!found) {
-                    return "No such method " + method + " in class " + invoker.getInterface().getName();
+                    return "No such method " + method + " in class "
+                            + invoker.getInterface().getName();
                 }
             }
             TraceFilter.addTracer(invoker.getInterface(), method, channel, Integer.parseInt(times));
@@ -89,5 +89,4 @@ public class TraceTelnetHandler implements TelnetHandler {
         }
         return null;
     }
-
 }

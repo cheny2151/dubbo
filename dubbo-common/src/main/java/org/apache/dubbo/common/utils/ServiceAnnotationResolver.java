@@ -16,11 +16,16 @@
  */
 package org.apache.dubbo.common.utils;
 
+import org.apache.dubbo.common.compact.Dubbo2CompactUtils;
+import org.apache.dubbo.config.annotation.DubboService;
 import org.apache.dubbo.config.annotation.Service;
 
 import java.lang.annotation.Annotation;
+import java.util.List;
 
 import static java.lang.String.format;
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableList;
 import static org.apache.dubbo.common.utils.AnnotationUtils.getAttribute;
 import static org.apache.dubbo.common.utils.ArrayUtils.isNotEmpty;
 import static org.apache.dubbo.common.utils.ClassUtils.isGenericClass;
@@ -36,6 +41,21 @@ import static org.apache.dubbo.common.utils.StringUtils.isEmpty;
  */
 public class ServiceAnnotationResolver {
 
+    /**
+     * The annotation {@link Class classes} of Dubbo Service (read-only)
+     *
+     * @since 2.7.9
+     */
+    public static List<Class<? extends Annotation>> SERVICE_ANNOTATION_CLASSES = loadServiceAnnotationClasses();
+
+    private static List<Class<? extends Annotation>> loadServiceAnnotationClasses() {
+        if (Dubbo2CompactUtils.isEnabled() && Dubbo2CompactUtils.isServiceClassLoaded()) {
+            return unmodifiableList(asList(DubboService.class, Service.class, Dubbo2CompactUtils.getServiceClass()));
+        } else {
+            return unmodifiableList(asList(DubboService.class, Service.class));
+        }
+    }
+
     private final Annotation serviceAnnotation;
 
     private final Class<?> serviceType;
@@ -47,18 +67,19 @@ public class ServiceAnnotationResolver {
 
     private Annotation getServiceAnnotation(Class<?> serviceType) {
 
-        Annotation serviceAnnotation = serviceType.getAnnotation(Service.class);
+        Annotation serviceAnnotation = null;
 
-        if (serviceAnnotation == null) {
-            serviceAnnotation = serviceType.getAnnotation(com.alibaba.dubbo.config.annotation.Service.class);
+        for (Class<? extends Annotation> serviceAnnotationClass : SERVICE_ANNOTATION_CLASSES) {
+            serviceAnnotation = serviceType.getAnnotation(serviceAnnotationClass);
+            if (serviceAnnotation != null) {
+                break;
+            }
         }
 
         if (serviceAnnotation == null) {
-            throw new IllegalArgumentException(format("@%s or @%s can't be found in the service type[%s].",
-                    Service.class.getName(),
-                    com.alibaba.dubbo.config.annotation.Service.class.getName(),
-                    serviceType.getName()
-            ));
+            throw new IllegalArgumentException(format(
+                    "Any annotation of [%s] can't be annotated in the service type[%s].",
+                    SERVICE_ANNOTATION_CLASSES, serviceType.getName()));
         }
 
         return serviceAnnotation;
@@ -71,7 +92,7 @@ public class ServiceAnnotationResolver {
      */
     public String resolveInterfaceClassName() {
 
-        Class interfaceClass = null;
+        Class interfaceClass;
         // first, try to get the value from "interfaceName" attribute
         String interfaceName = resolveAttribute("interfaceName");
 

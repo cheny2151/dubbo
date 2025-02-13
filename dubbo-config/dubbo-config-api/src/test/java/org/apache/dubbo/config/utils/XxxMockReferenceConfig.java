@@ -40,11 +40,11 @@ public class XxxMockReferenceConfig extends ReferenceConfig<XxxService> {
     }
 
     @Override
-    public synchronized XxxService get() {
+    public synchronized XxxService get(boolean check) {
         if (value != null) return value;
 
         counter.getAndIncrement();
-        value = super.get();
+        value = super.get(check);
         return value;
     }
 
@@ -54,6 +54,7 @@ public class XxxMockReferenceConfig extends ReferenceConfig<XxxService> {
 
     @Override
     public synchronized void destroy() {
+        super.destroy();
         destroyMethodRun = true;
     }
 }

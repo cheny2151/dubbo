@@ -16,12 +16,13 @@
  */
 package org.apache.dubbo.common.convert.multiple;
 
+import org.apache.dubbo.common.convert.ConverterUtil;
 import org.apache.dubbo.common.convert.StringConverter;
+import org.apache.dubbo.rpc.model.FrameworkModel;
 
 import java.util.Collection;
 import java.util.Optional;
 
-import static org.apache.dubbo.common.convert.Converter.getConverter;
 import static org.apache.dubbo.common.utils.ClassUtils.getAllInterfaces;
 import static org.apache.dubbo.common.utils.ClassUtils.isAssignableFrom;
 import static org.apache.dubbo.common.utils.TypeUtils.findActualTypeArgument;
@@ -32,6 +33,11 @@ import static org.apache.dubbo.common.utils.TypeUtils.findActualTypeArgument;
  * @since 2.7.6
  */
 public abstract class StringToIterableConverter<T extends Iterable> implements StringToMultiValueConverter {
+    private ConverterUtil converterUtil;
+
+    public StringToIterableConverter(FrameworkModel frameworkModel) {
+        converterUtil = frameworkModel.getBeanFactory().getBean(ConverterUtil.class);
+    }
 
     public boolean accept(Class<String> type, Class<?> multiValueType) {
         return isAssignableFrom(getSupportedType(), multiValueType);
@@ -42,28 +48,29 @@ public abstract class StringToIterableConverter<T extends Iterable> implements S
 
         Optional<StringConverter> stringConverter = getStringConverter(elementType);
 
-        return stringConverter.map(converter -> {
+        return stringConverter
+                .map(converter -> {
+                    T convertedObject = createMultiValue(size, multiValueType);
 
-            T convertedObject = createMultiValue(size, multiValueType);
+                    if (convertedObject instanceof Collection) {
+                        Collection collection = (Collection) convertedObject;
+                        for (int i = 0; i < size; i++) {
+                            String segment = segments[i];
+                            Object element = converter.convert(segment);
+                            collection.add(element);
+                        }
+                        return collection;
+                    }
 
-            if (convertedObject instanceof Collection) {
-                Collection collection = (Collection) convertedObject;
-                for (int i = 0; i < size; i++) {
-                    String segment = segments[i];
-                    Object element = converter.convert(segment);
-                    collection.add(element);
-                }
-                return collection;
-            }
-
-            return convertedObject;
-        }).orElse(null);
+                    return convertedObject;
+                })
+                .orElse(null);
     }
 
     protected abstract T createMultiValue(int size, Class<?> multiValueType);
 
     protected Optional<StringConverter> getStringConverter(Class<?> elementType) {
-        StringConverter converter = (StringConverter) getConverter(String.class, elementType);
+        StringConverter converter = (StringConverter) converterUtil.getConverter(String.class, elementType);
         return Optional.ofNullable(converter);
     }
 
@@ -73,8 +80,8 @@ public abstract class StringToIterableConverter<T extends Iterable> implements S
 
     @Override
     public final int getPriority() {
-        int level = getAllInterfaces(getSupportedType(), type ->
-                isAssignableFrom(Iterable.class, type)).size();
+        int level = getAllInterfaces(getSupportedType(), type -> isAssignableFrom(Iterable.class, type))
+                .size();
         return MIN_PRIORITY - level;
     }
 }

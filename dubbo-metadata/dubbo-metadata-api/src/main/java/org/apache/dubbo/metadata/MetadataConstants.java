@@ -21,17 +21,13 @@ public interface MetadataConstants {
     String DEFAULT_PATH_TAG = "metadata";
     String KEY_REVISON_PREFIX = "revision";
     String META_DATA_STORE_TAG = ".metaData";
-    String SERVICE_META_DATA_STORE_TAG = ".smd";
-    String CONSUMER_META_DATA_STORE_TAG = ".cmd";
+    String METADATA_PUBLISH_DELAY_KEY = "dubbo.application.metadata.publish.delay";
+    int DEFAULT_METADATA_PUBLISH_DELAY = 1000;
+    String METADATA_PROXY_TIMEOUT_KEY = "dubbo.application.metadata.proxy.delay";
+    int DEFAULT_METADATA_TIMEOUT_VALUE = 5000;
+    String REPORT_CONSUMER_URL_KEY = "report-consumer-definition";
 
-    /**
-     * @since 2.7.8
-     */
-    String EXPORTED_URLS_TAG = "exported-urls";
+    String PATH_SEPARATOR = "/";
 
-    /**
-     * @since 2.7.8
-     */
-    String SUBSCRIBED_URLS_TAG = "subscribed-urls";
-
+    String NAMESPACE_KEY = "namespace";
 }

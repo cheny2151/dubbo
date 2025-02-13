@@ -17,6 +17,7 @@
 package org.apache.dubbo.qos.legacy;
 
 import org.apache.dubbo.common.extension.Activate;
+import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.remoting.Channel;
 import org.apache.dubbo.remoting.telnet.TelnetHandler;
 import org.apache.dubbo.remoting.telnet.support.Help;
@@ -34,14 +35,14 @@ public class ChangeTelnetHandler implements TelnetHandler {
 
     @Override
     public String telnet(Channel channel, String message) {
-        if (message == null || message.length() == 0) {
+        if (StringUtils.isEmpty(message)) {
             return "Please input service name, eg: \r\ncd XxxService\r\ncd com.xxx.XxxService";
         }
         StringBuilder buf = new StringBuilder();
         if ("/".equals(message) || "..".equals(message)) {
             String service = (String) channel.getAttribute(SERVICE_KEY);
             channel.removeAttribute(SERVICE_KEY);
-            buf.append("Cancelled default service ").append(service).append(".");
+            buf.append("Cancelled default service ").append(service).append('.');
         } else {
             boolean found = false;
             for (Exporter<?> exporter : DubboProtocol.getDubboProtocol().getExporters()) {
@@ -54,12 +55,13 @@ public class ChangeTelnetHandler implements TelnetHandler {
             }
             if (found) {
                 channel.setAttribute(SERVICE_KEY, message);
-                buf.append("Used the ").append(message).append(" as default.\r\nYou can cancel default service by command: cd /");
+                buf.append("Used the ")
+                        .append(message)
+                        .append(" as default.\r\nYou can cancel default service by command: cd /");
             } else {
                 buf.append("No such service ").append(message);
             }
         }
         return buf.toString();
     }
-
 }

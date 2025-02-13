@@ -19,6 +19,8 @@ package org.apache.dubbo.rpc;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.remoting.RemotingServer;
 
+import java.util.Map;
+
 /**
  * Distinct from {@link RemotingServer}, each protocol holds one or more ProtocolServers(the number usually decides by port numbers),
  * while each ProtocolServer holds zero or one RemotingServer.
@@ -29,8 +31,7 @@ public interface ProtocolServer {
         return null;
     }
 
-    default void setRemotingServers(RemotingServer server) {
-    }
+    default void setRemotingServers(RemotingServer server) {}
 
     String getAddress();
 
@@ -40,8 +41,9 @@ public interface ProtocolServer {
         return null;
     }
 
-    default void reset(URL url) {
-    }
+    default void reset(URL url) {}
 
     void close();
+
+    Map<String, Object> getAttributes();
 }

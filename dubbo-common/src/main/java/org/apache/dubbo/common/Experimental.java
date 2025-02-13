@@ -22,16 +22,17 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Indicating unstable API, may get removed or changed in the next release.
+ * Indicating unstable API, may get removed or changed in future releases.
  */
 @Retention(RetentionPolicy.CLASS)
 @Target({
-        ElementType.ANNOTATION_TYPE,
-        ElementType.CONSTRUCTOR,
-        ElementType.FIELD,
-        ElementType.METHOD,
-        ElementType.PACKAGE,
-        ElementType.TYPE})
+    ElementType.ANNOTATION_TYPE,
+    ElementType.CONSTRUCTOR,
+    ElementType.FIELD,
+    ElementType.METHOD,
+    ElementType.PACKAGE,
+    ElementType.TYPE
+})
 public @interface Experimental {
     String value();
 }

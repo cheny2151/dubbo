@@ -19,11 +19,12 @@ package org.apache.dubbo.config;
 import org.apache.dubbo.common.constants.RegistryConstants;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ApplicationModel;
 
 import java.util.Map;
 
 /**
- * MonitorConfig
+ * Configuration for the monitor.
  *
  * @export
  */
@@ -32,8 +33,8 @@ public class MonitorConfig extends AbstractConfig {
     private static final long serialVersionUID = -1184681514659198203L;
 
     /**
-     * The protocol of the monitor, if the value is registry, it will search the monitor address from the registry center,
-     * otherwise, it will directly connect to the monitor center
+     * The protocol of the monitor. If the value is "registry" it will search the monitor address from the registry center.
+     * Otherwise, it will directly connect to the monitor center.
      */
     private String protocol;
 
@@ -43,35 +44,47 @@ public class MonitorConfig extends AbstractConfig {
     private String address;
 
     /**
-     * The monitor user name
+     * The monitor username
      */
     private String username;
 
     /**
-     * The password
+     * The monitor password
      */
     private String password;
 
+    /**
+     * The monitor group
+     */
     private String group;
 
+    /**
+     * The monitor version
+     */
     private String version;
 
+    /**
+     * The monitor reporting interval
+     */
     private String interval;
 
     /**
-     * customized parameters
+     * Customized parameters
      */
     private Map<String, String> parameters;
 
-    /**
-     * If it's default
-     */
-    private Boolean isDefault;
+    public MonitorConfig() {}
 
-    public MonitorConfig() {
+    public MonitorConfig(ApplicationModel applicationModel) {
+        super(applicationModel);
     }
 
     public MonitorConfig(String address) {
+        this.address = address;
+    }
+
+    public MonitorConfig(ApplicationModel applicationModel, String address) {
+        super(applicationModel);
         this.address = address;
     }
 
@@ -135,14 +148,6 @@ public class MonitorConfig extends AbstractConfig {
         this.parameters = parameters;
     }
 
-    public Boolean isDefault() {
-        return isDefault;
-    }
-
-    public void setDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
-    }
-
     public String getInterval() {
         return interval;
     }
@@ -152,9 +157,8 @@ public class MonitorConfig extends AbstractConfig {
     }
 
     @Override
-    @Parameter(excluded = true)
+    @Parameter(excluded = true, attribute = false)
     public boolean isValid() {
         return StringUtils.isNotEmpty(address) || RegistryConstants.REGISTRY_PROTOCOL.equals(protocol);
     }
-
 }

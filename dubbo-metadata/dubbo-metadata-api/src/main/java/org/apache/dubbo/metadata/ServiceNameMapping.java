@@ -17,74 +17,107 @@
 package org.apache.dubbo.metadata;
 
 import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.constants.RegistryConstants;
 import org.apache.dubbo.common.extension.SPI;
-import org.apache.dubbo.common.lang.Prioritized;
+import org.apache.dubbo.common.utils.CollectionUtils;
+import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.rpc.model.ScopeModel;
+import org.apache.dubbo.rpc.model.ScopeModelUtil;
+import org.apache.dubbo.rpc.service.Destroyable;
 
 import java.util.Set;
+import java.util.TreeSet;
 
-import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
+import static java.util.Collections.emptySet;
+import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Stream.of;
+import static org.apache.dubbo.common.constants.CommonConstants.COMMA_SEPARATOR;
+import static org.apache.dubbo.common.extension.ExtensionScope.APPLICATION;
 
 /**
- * The interface for Dubbo service name Mapping
+ * This will interact with remote metadata center to find the interface-app mapping and will cache the data locally.
  *
- * @since 2.7.5
+ * Call variants of getCachedMapping() methods whenever need to use the mapping data.
  */
-@SPI("default")
-public interface ServiceNameMapping extends Prioritized {
+@SPI(value = "metadata", scope = APPLICATION)
+public interface ServiceNameMapping extends Destroyable {
+
+    String DEFAULT_MAPPING_GROUP = "mapping";
 
     /**
      * Map the specified Dubbo service interface, group, version and protocol to current Dubbo service name
-     *
-     * @param serviceInterface the class name of Dubbo service interface
-     * @param group            the group of Dubbo service interface (optional)
-     * @param version          the version of Dubbo service interface version (optional)
-     * @param protocol         the protocol of Dubbo service interface exported (optional)
-     * @deprecated 2.7.8 This method will be removed since 3.0
      */
-    @Deprecated
-    default void map(String serviceInterface, String group, String version, String protocol) {
-        throw new UnsupportedOperationException("This method has been deprecated and should not be invoked!");
-    }
+    boolean map(URL url);
 
-    /**
-     * Map the specified Dubbo service {@link URL} to current Dubbo service name
-     *
-     * @param exportedURL the {@link URL} that the Dubbo Provider exported
-     * @since 2.7.8
-     */
-    void map(URL exportedURL);
-
-    /**
-     * Get the service names from the specified Dubbo service interface, group, version and protocol
-     *
-     * @param serviceInterface the class name of Dubbo service interface
-     * @param group            the group of Dubbo service interface (optional)
-     * @param version          the version of Dubbo service interface version (optional)
-     * @param protocol         the protocol of Dubbo service interface exported (optional)
-     * @return non-null {@link Set}
-     * @deprecated 2.7.8 This method will be removed since 3.0
-     */
-    @Deprecated
-    default Set<String> get(String serviceInterface, String group, String version, String protocol) {
-        throw new UnsupportedOperationException("This method has been deprecated and should not be invoked!");
-    }
-
-    /**
-     * Get the service names from the subscribed Dubbo service {@link URL}
-     *
-     * @param subscribedURL the {@link URL} that the Dubbo consumer subscribed
-     * @return non-null {@link Set}
-     * @since 2.7.8
-     */
-    Set<String> get(URL subscribedURL);
+    boolean hasValidMetadataCenter();
 
     /**
      * Get the default extension of {@link ServiceNameMapping}
      *
      * @return non-null {@link ServiceNameMapping}
-     * @see DynamicConfigurationServiceNameMapping
      */
-    static ServiceNameMapping getDefaultExtension() {
-        return getExtensionLoader(ServiceNameMapping.class).getDefaultExtension();
+    static ServiceNameMapping getDefaultExtension(ScopeModel scopeModel) {
+        return ScopeModelUtil.getApplicationModel(scopeModel).getDefaultExtension(ServiceNameMapping.class);
     }
+
+    static String buildMappingKey(URL url) {
+        return buildGroup(url.getServiceInterface());
+    }
+
+    static String buildGroup(String serviceInterface) {
+        // the issue : https://github.com/apache/dubbo/issues/4671
+        //        return DEFAULT_MAPPING_GROUP + SLASH + serviceInterface;
+        return serviceInterface;
+    }
+
+    static String toStringKeys(Set<String> serviceNames) {
+        if (CollectionUtils.isEmpty(serviceNames)) {
+            return "";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (String n : serviceNames) {
+            builder.append(n);
+            builder.append(COMMA_SEPARATOR);
+        }
+
+        builder.deleteCharAt(builder.length() - 1);
+        return builder.toString();
+    }
+
+    static Set<String> getAppNames(String content) {
+        if (StringUtils.isBlank(content)) {
+            return emptySet();
+        }
+        return new TreeSet<>(of(content.split(COMMA_SEPARATOR))
+                .map(String::trim)
+                .filter(StringUtils::isNotEmpty)
+                .collect(toSet()));
+    }
+
+    static Set<String> getMappingByUrl(URL consumerURL) {
+        String providedBy = consumerURL.getParameter(RegistryConstants.PROVIDED_BY);
+        if (StringUtils.isBlank(providedBy)) {
+            return null;
+        }
+        return AbstractServiceNameMapping.parseServices(providedBy);
+    }
+
+    /**
+     * Get the latest mapping result from remote center and register listener at the same time to get notified once mapping changes.
+     *
+     * @param listener listener that will be notified on mapping change
+     * @return the latest mapping result from remote center
+     */
+    Set<String> getAndListen(URL registryURL, URL subscribedURL, MappingListener listener);
+
+    MappingListener stopListen(URL subscribeURL, MappingListener listener);
+
+    void putCachedMapping(String serviceKey, Set<String> apps);
+
+    Set<String> getMapping(URL consumerURL);
+
+    Set<String> getRemoteMapping(URL consumerURL);
+
+    Set<String> removeCachedMapping(String serviceKey);
 }

@@ -18,9 +18,6 @@ package org.apache.dubbo.common.convert.multiple;
 
 import org.apache.dubbo.common.utils.CollectionUtils;
 
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -38,6 +35,9 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.TransferQueue;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import static java.util.Arrays.asList;
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -50,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToTransferQueueConverterTest {
+class StringToTransferQueueConverterTest {
 
     private MultiValueConverter converter;
 
@@ -60,7 +60,7 @@ public class StringToTransferQueueConverterTest {
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
 
         assertFalse(converter.accept(String.class, Collection.class));
 
@@ -88,7 +88,7 @@ public class StringToTransferQueueConverterTest {
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
 
         TransferQueue values = new LinkedTransferQueue(asList(1, 2, 3));
 
@@ -109,12 +109,12 @@ public class StringToTransferQueueConverterTest {
     }
 
     @Test
-    public void testGetSourceType() {
+    void testGetSourceType() {
         assertEquals(String.class, converter.getSourceType());
     }
 
     @Test
-    public void testGetPriority() {
+    void testGetPriority() {
         assertEquals(Integer.MAX_VALUE - 4, converter.getPriority());
     }
 }

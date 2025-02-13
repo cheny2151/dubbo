@@ -19,12 +19,12 @@ package org.apache.dubbo.auth;
 import org.apache.dubbo.auth.model.AccessKeyPair;
 import org.apache.dubbo.common.URL;
 import org.apache.dubbo.rpc.Invocation;
+
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
-
 
 class DefaultAccessKeyStorageTest {
 

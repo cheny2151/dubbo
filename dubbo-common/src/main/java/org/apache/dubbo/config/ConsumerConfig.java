@@ -17,6 +17,15 @@
 package org.apache.dubbo.config;
 
 import org.apache.dubbo.common.utils.StringUtils;
+import org.apache.dubbo.common.utils.SystemPropertyConfigUtils;
+import org.apache.dubbo.config.support.Parameter;
+import org.apache.dubbo.rpc.model.ModuleModel;
+
+import static org.apache.dubbo.common.constants.CommonConstants.MESH_ENABLE;
+import static org.apache.dubbo.common.constants.CommonConstants.REFER_BACKGROUND_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.REFER_THREAD_NUM_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.SystemProperty.SYSTEM_TCP_RESPONSE_TIMEOUT;
+import static org.apache.dubbo.common.constants.CommonConstants.URL_MERGE_PROCESSOR_KEY;
 
 /**
  * The service consumer default configuration
@@ -26,16 +35,6 @@ import org.apache.dubbo.common.utils.StringUtils;
 public class ConsumerConfig extends AbstractReferenceConfig {
 
     private static final long serialVersionUID = 2827274711143680600L;
-
-    /**
-     * Whether to use the default protocol
-     */
-    private Boolean isDefault;
-
-    /**
-     * Networking framework client uses: netty, mina, etc.
-     */
-    private String client;
 
     /**
      * Consumer thread pool type: cached, fixed, limit, eager
@@ -63,26 +62,45 @@ public class ConsumerConfig extends AbstractReferenceConfig {
      */
     private Integer shareconnections;
 
+    /**
+     * Url Merge Processor
+     * Used to customize the URL merge of consumer and provider
+     */
+    private String urlMergeProcessor;
+
+    /**
+     * Thread num for asynchronous refer pool size
+     */
+    private Integer referThreadNum;
+
+    /**
+     * Whether refer should run in background or not.
+     *
+     * @see ModuleConfig#setBackground(Boolean)
+     * @deprecated replace with {@link ModuleConfig#setBackground(Boolean)}
+     */
+    private Boolean referBackground;
+
+    /**
+     * enable mesh mode
+     *
+     * @since 3.1.0
+     */
+    private Boolean meshEnable;
+
+    public ConsumerConfig() {}
+
+    public ConsumerConfig(ModuleModel moduleModel) {
+        super(moduleModel);
+    }
+
     @Override
     public void setTimeout(Integer timeout) {
         super.setTimeout(timeout);
-        String rmiTimeout = System.getProperty("sun.rmi.transport.tcp.responseTimeout");
-        if (timeout != null && timeout > 0
-                && (StringUtils.isEmpty(rmiTimeout))) {
-            System.setProperty("sun.rmi.transport.tcp.responseTimeout", String.valueOf(timeout));
+        String rmiTimeout = SystemPropertyConfigUtils.getSystemProperty(SYSTEM_TCP_RESPONSE_TIMEOUT);
+        if (timeout != null && timeout > 0 && (StringUtils.isEmpty(rmiTimeout))) {
+            SystemPropertyConfigUtils.setSystemProperty(SYSTEM_TCP_RESPONSE_TIMEOUT, String.valueOf(timeout));
         }
-    }
-
-    public Boolean isDefault() {
-        return isDefault;
-    }
-
-    public String getClient() {
-        return client;
-    }
-
-    public void setClient(String client) {
-        this.client = client;
     }
 
     public String getThreadpool() {
@@ -91,14 +109,6 @@ public class ConsumerConfig extends AbstractReferenceConfig {
 
     public void setThreadpool(String threadpool) {
         this.threadpool = threadpool;
-    }
-
-    public Boolean getDefault() {
-        return isDefault;
-    }
-
-    public void setDefault(Boolean isDefault) {
-        this.isDefault = isDefault;
     }
 
     public Integer getCorethreads() {
@@ -131,5 +141,49 @@ public class ConsumerConfig extends AbstractReferenceConfig {
 
     public void setShareconnections(Integer shareconnections) {
         this.shareconnections = shareconnections;
+    }
+
+    @Parameter(key = URL_MERGE_PROCESSOR_KEY)
+    public String getUrlMergeProcessor() {
+        return urlMergeProcessor;
+    }
+
+    public void setUrlMergeProcessor(String urlMergeProcessor) {
+        this.urlMergeProcessor = urlMergeProcessor;
+    }
+
+    @Parameter(key = REFER_THREAD_NUM_KEY, excluded = true)
+    public Integer getReferThreadNum() {
+        return referThreadNum;
+    }
+
+    public void setReferThreadNum(Integer referThreadNum) {
+        this.referThreadNum = referThreadNum;
+    }
+
+    @Deprecated
+    @Parameter(key = REFER_BACKGROUND_KEY, excluded = true)
+    public Boolean getReferBackground() {
+        return referBackground;
+    }
+
+    /**
+     * Whether refer should run in background or not.
+     *
+     * @see ModuleConfig#setBackground(Boolean)
+     * @deprecated replace with {@link ModuleConfig#setBackground(Boolean)}
+     */
+    @Deprecated
+    public void setReferBackground(Boolean referBackground) {
+        this.referBackground = referBackground;
+    }
+
+    @Parameter(key = MESH_ENABLE)
+    public Boolean getMeshEnable() {
+        return meshEnable;
+    }
+
+    public void setMeshEnable(Boolean meshEnable) {
+        this.meshEnable = meshEnable;
     }
 }

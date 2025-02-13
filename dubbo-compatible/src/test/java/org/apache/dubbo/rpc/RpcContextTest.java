@@ -14,21 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dubbo.rpc;
-
-import com.alibaba.dubbo.rpc.RpcContext;
-import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
+import com.alibaba.dubbo.rpc.RpcContext;
+import org.junit.jupiter.api.Test;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class RpcContextTest {
+class RpcContextTest {
 
     @Test
-    public void testSetFuture() {
+    void testSetFuture() {
         CompletableFuture completableFuture = new CompletableFuture();
         RpcContext.getContext().setFuture(completableFuture);
 
@@ -37,7 +36,7 @@ public class RpcContextTest {
     }
 
     @Test
-    public void testSetFutureAlibaba() {
+    void testSetFutureAlibaba() {
         CompletableFuture completableFuture = new CompletableFuture();
         RpcContext.getContext().setFuture(completableFuture);
 

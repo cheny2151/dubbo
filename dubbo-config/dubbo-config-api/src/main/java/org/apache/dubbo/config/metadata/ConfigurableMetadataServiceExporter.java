@@ -16,105 +16,175 @@
  */
 package org.apache.dubbo.config.metadata;
 
-import org.apache.dubbo.common.URL;
+import org.apache.dubbo.common.logger.ErrorTypeAwareLogger;
+import org.apache.dubbo.common.logger.LoggerFactory;
+import org.apache.dubbo.common.threadpool.manager.FrameworkExecutorRepository;
 import org.apache.dubbo.config.ApplicationConfig;
-import org.apache.dubbo.config.ProtocolConfig;
-import org.apache.dubbo.config.RegistryConfig;
+import org.apache.dubbo.config.ArgumentConfig;
+import org.apache.dubbo.config.MethodConfig;
 import org.apache.dubbo.config.ServiceConfig;
-import org.apache.dubbo.config.context.ConfigManager;
+import org.apache.dubbo.config.bootstrap.builders.InternalServiceConfigBuilder;
 import org.apache.dubbo.metadata.MetadataService;
-import org.apache.dubbo.metadata.MetadataServiceExporter;
-import org.apache.dubbo.metadata.MetadataServiceType;
+import org.apache.dubbo.metadata.MetadataServiceV2;
+import org.apache.dubbo.metadata.util.MetadataServiceVersionUtils;
+import org.apache.dubbo.registry.client.metadata.MetadataServiceDelegation;
+import org.apache.dubbo.registry.client.metadata.MetadataServiceDelegationV2;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 
-import static java.util.Collections.emptyList;
-import static java.util.EnumSet.allOf;
-import static org.apache.dubbo.common.constants.CommonConstants.DEFAULT_METADATA_STORAGE_TYPE;
-import static org.apache.dubbo.common.constants.CommonConstants.DUBBO;
+import static org.apache.dubbo.common.constants.CommonConstants.METADATA_SERVICE_PORT_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.METADATA_SERVICE_PROTOCOL_KEY;
+import static org.apache.dubbo.common.constants.CommonConstants.TRIPLE;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.CONFIG_METADATA_SERVICE_EXPORTED;
+import static org.apache.dubbo.metadata.util.MetadataServiceVersionUtils.V1;
+import static org.apache.dubbo.metadata.util.MetadataServiceVersionUtils.V2;
 
 /**
- * {@link MetadataServiceExporter} implementation based on {@link ConfigManager Dubbo configurations}, the clients
- * should make sure the {@link ApplicationConfig}, {@link RegistryConfig} and {@link ProtocolConfig} are ready before
- * {@link #export()}.
- * <p>
- * Typically, do not worry about their ready status, because they are initialized before
- * any {@link ServiceConfig} exports, or The Dubbo export will be failed.
- * <p>
- * Being aware of it's not a thread-safe implementation.
- *
- * @see MetadataServiceExporter
- * @see ServiceConfig
- * @see ConfigManager
- * @since 2.7.5
+ * Export metadata service
  */
-public class ConfigurableMetadataServiceExporter extends AbstractMetadataServiceExporter {
+public class ConfigurableMetadataServiceExporter {
 
+    private final ErrorTypeAwareLogger logger = LoggerFactory.getErrorTypeAwareLogger(getClass());
+
+    @Deprecated
+    private final MetadataServiceDelegation metadataService;
+
+    private final MetadataServiceDelegationV2 metadataServiceV2;
+
+    @Deprecated
     private volatile ServiceConfig<MetadataService> serviceConfig;
 
-    public ConfigurableMetadataServiceExporter() {
-        super(DEFAULT_METADATA_STORAGE_TYPE, MAX_PRIORITY, allOf(MetadataServiceType.class));
+    private volatile ServiceConfig<MetadataServiceV2> serviceConfigV2;
+
+    private final ApplicationModel applicationModel;
+
+    public ConfigurableMetadataServiceExporter(
+            ApplicationModel applicationModel,
+            MetadataServiceDelegation metadataService,
+            MetadataServiceDelegationV2 metadataServiceV2) {
+        this.applicationModel = applicationModel;
+        this.metadataService = metadataService;
+        this.metadataServiceV2 = metadataServiceV2;
     }
 
-    @Override
-    protected void doExport() throws Exception {
+    public synchronized ConfigurableMetadataServiceExporter export() {
+        if (serviceConfig == null || !isExported()) {
+            if (MetadataServiceVersionUtils.needExportV1(applicationModel)) {
+                exportV1();
+            }
+            if (MetadataServiceVersionUtils.needExportV2(applicationModel)) {
+                exportV2();
+            }
+        } else {
+            if (logger.isWarnEnabled()) {
+                logger.warn(
+                        CONFIG_METADATA_SERVICE_EXPORTED,
+                        "",
+                        "",
+                        "The MetadataService has been exported : " + serviceConfig.getExportedUrls());
+            }
+        }
 
-        ServiceConfig<MetadataService> serviceConfig = new ServiceConfig<>();
-        serviceConfig.setApplication(getApplicationConfig());
-        serviceConfig.setRegistries(getRegistries());
-        serviceConfig.setProtocol(generateMetadataProtocol());
-        serviceConfig.setInterface(MetadataService.class);
-        serviceConfig.setRef(metadataService);
-        serviceConfig.setGroup(getApplicationConfig().getName());
-        serviceConfig.setVersion(metadataService.version());
+        return this;
+    }
 
-        // export
+    private static final String INTERNAL_METADATA_REGISTRY_ID = "internal-metadata-registry";
+
+    private void exportV1() {
+        ExecutorService internalServiceExecutor = applicationModel
+                .getFrameworkModel()
+                .getBeanFactory()
+                .getBean(FrameworkExecutorRepository.class)
+                .getInternalServiceExecutor();
+        this.serviceConfig = InternalServiceConfigBuilder.<MetadataService>newBuilder(applicationModel)
+                .interfaceClass(MetadataService.class)
+                .protocol(getApplicationConfig().getMetadataServiceProtocol(), METADATA_SERVICE_PROTOCOL_KEY)
+                .port(getApplicationConfig().getMetadataServicePort(), METADATA_SERVICE_PORT_KEY)
+                .registryId(INTERNAL_METADATA_REGISTRY_ID)
+                .executor(internalServiceExecutor)
+                .ref(metadataService)
+                .version(V1)
+                .build(configConsumer -> configConsumer.setMethods(generateMethodConfig()));
+
         serviceConfig.export();
+        metadataService.setMetadataURL(serviceConfig.getExportedUrls().get(0));
 
         if (logger.isInfoEnabled()) {
             logger.info("The MetadataService exports urls : " + serviceConfig.getExportedUrls());
         }
-
-        this.serviceConfig = serviceConfig;
     }
 
-    @Override
-    protected void doUnexport() throws Exception {
-        if (serviceConfig != null) {
-            serviceConfig.unexport();
+    private void exportV2() {
+        ExecutorService internalServiceExecutor = applicationModel
+                .getFrameworkModel()
+                .getBeanFactory()
+                .getBean(FrameworkExecutorRepository.class)
+                .getInternalServiceExecutor();
+        this.serviceConfigV2 = InternalServiceConfigBuilder.<MetadataServiceV2>newBuilder(applicationModel)
+                .interfaceClass(MetadataServiceV2.class)
+                .protocol(TRIPLE, METADATA_SERVICE_PROTOCOL_KEY)
+                .port(getApplicationConfig().getMetadataServicePort(), METADATA_SERVICE_PORT_KEY)
+                .registryId(INTERNAL_METADATA_REGISTRY_ID)
+                .executor(internalServiceExecutor)
+                .ref(metadataServiceV2)
+                .version(V2)
+                .build();
+
+        serviceConfigV2.export();
+        metadataServiceV2.setMetadataUrl(serviceConfigV2.getExportedUrls().get(0));
+
+        if (logger.isInfoEnabled()) {
+            logger.info("The MetadataServiceV2 exports urls : " + serviceConfigV2.getExportedUrls());
         }
     }
 
-    @Override
-    public List<URL> getExportedURLs() {
-        return serviceConfig != null ? serviceConfig.getExportedUrls() : emptyList();
+    public ConfigurableMetadataServiceExporter unexport() {
+        if (isExported()) {
+            serviceConfig.unexport();
+            serviceConfigV2.unexport();
+            metadataService.setMetadataURL(null);
+        }
+        return this;
+    }
+
+    private boolean v1Exported() {
+        return serviceConfig != null && serviceConfig.isExported() && !serviceConfig.isUnexported();
+    }
+
+    private boolean v2Exported() {
+        return serviceConfigV2 != null && serviceConfigV2.isExported() && !serviceConfigV2.isUnexported();
     }
 
     public boolean isExported() {
-        return serviceConfig != null && serviceConfig.isExported();
-    }
-
-    @Override
-    public int getPriority() {
-        return MAX_PRIORITY;
+        return v1Exported() || v2Exported();
     }
 
     private ApplicationConfig getApplicationConfig() {
-        return ApplicationModel.getConfigManager().getApplication().get();
+        return applicationModel.getApplicationConfigManager().getApplication().get();
     }
 
-    private List<RegistryConfig> getRegistries() {
-        return new ArrayList<>(ApplicationModel.getConfigManager().getRegistries());
-    }
+    /**
+     * Generate Method Config for Service Discovery Metadata <p/>
+     * <p>
+     * Make {@link MetadataService} support argument callback,
+     * used to notify {@link org.apache.dubbo.registry.client.ServiceInstance}'s
+     * metadata change event
+     *
+     * @since 3.0
+     */
+    private List<MethodConfig> generateMethodConfig() {
+        MethodConfig methodConfig = new MethodConfig();
+        methodConfig.setName("getAndListenInstanceMetadata");
 
-    private ProtocolConfig generateMetadataProtocol() {
-        ProtocolConfig defaultProtocol = new ProtocolConfig();
-        defaultProtocol.setName(DUBBO);
-        // defaultProtocol.setHost() ?
-        // auto-increment port
-        defaultProtocol.setPort(-1);
-        return defaultProtocol;
+        ArgumentConfig argumentConfig = new ArgumentConfig();
+        argumentConfig.setIndex(1);
+        argumentConfig.setCallback(true);
+
+        methodConfig.setArguments(Collections.singletonList(argumentConfig));
+
+        return Collections.singletonList(methodConfig);
     }
 }

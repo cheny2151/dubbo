@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dubbo.rpc.protocol;
 
 import org.apache.dubbo.common.Parameters;
@@ -37,23 +36,25 @@ import org.apache.dubbo.rpc.RpcException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.apache.dubbo.common.constants.CommonConstants.ANYHOST_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.ANYHOST_VALUE;
+import static org.apache.dubbo.common.constants.LoggerCodeConstants.PROTOCOL_UNSUPPORTED;
 
 /**
  * AbstractProxyProtocol
  */
 public abstract class AbstractProxyProtocol extends AbstractProtocol {
 
-    private final List<Class<?>> rpcExceptions = new CopyOnWriteArrayList<Class<?>>();
+    private final List<Class<?>> rpcExceptions = new CopyOnWriteArrayList<>();
 
     protected ProxyFactory proxyFactory;
 
-    public AbstractProxyProtocol() {
-    }
+    public AbstractProxyProtocol() {}
 
     public AbstractProxyProtocol(Class<?>... exceptions) {
         for (Class<?> exception : exceptions) {
@@ -84,17 +85,17 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
                 return exporter;
             }
         }
-        final Runnable runnable = doExport(proxyFactory.getProxy(invoker, true), invoker.getInterface(), invoker.getUrl());
+        final Runnable runnable =
+                doExport(proxyFactory.getProxy(invoker, true), invoker.getInterface(), invoker.getUrl());
         exporter = new AbstractExporter<T>(invoker) {
             @Override
-            public void unexport() {
-                super.unexport();
+            public void afterUnExport() {
                 exporterMap.remove(uri);
                 if (runnable != null) {
                     try {
                         runnable.run();
                     } catch (Throwable t) {
-                        logger.warn(t.getMessage(), t);
+                        logger.warn(PROTOCOL_UNSUPPORTED, "", "", t.getMessage(), t);
                     }
                 }
             }
@@ -130,14 +131,29 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
                     throw getRpcException(type, url, invocation, e);
                 }
             }
+
+            @Override
+            public void destroy() {
+                super.destroy();
+                target.destroy();
+                invokers.remove(this);
+                AbstractProxyProtocol.this.destroyInternal(url);
+            }
         };
         invokers.add(invoker);
         return invoker;
     }
 
+    // used to destroy unused clients and other resource
+    protected void destroyInternal(URL url) {
+        // subclass override
+    }
+
     protected RpcException getRpcException(Class<?> type, URL url, Invocation invocation, Throwable e) {
-        RpcException re = new RpcException("Failed to invoke remote service: " + type + ", method: "
-                + invocation.getMethodName() + ", cause: " + e.getMessage(), e);
+        RpcException re = new RpcException(
+                "Failed to invoke remote service: " + type + ", method: " + invocation.getMethodName() + ", cause: "
+                        + e.getMessage(),
+                e);
         re.setCode(getErrorCode(e));
         return re;
     }
@@ -162,6 +178,7 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
 
         private RemotingServer server;
         private String address;
+        private Map<String, Object> attributes = new ConcurrentHashMap<>();
 
         public ProxyProtocolServer(RemotingServer server) {
             this.server = server;
@@ -191,6 +208,11 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         public void close() {
             server.close();
         }
+
+        @Override
+        public Map<String, Object> getAttributes() {
+            return attributes;
+        }
     }
 
     protected abstract class RemotingServerAdapter implements RemotingServer {
@@ -216,14 +238,10 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         }
 
         @Override
-        public void reset(Parameters parameters) {
-
-        }
+        public void reset(Parameters parameters) {}
 
         @Override
-        public void reset(URL url) {
-
-        }
+        public void reset(URL url) {}
 
         @Override
         public URL getUrl() {
@@ -241,35 +259,23 @@ public abstract class AbstractProxyProtocol extends AbstractProtocol {
         }
 
         @Override
-        public void send(Object message) throws RemotingException {
-
-        }
+        public void send(Object message) throws RemotingException {}
 
         @Override
-        public void send(Object message, boolean sent) throws RemotingException {
-
-        }
+        public void send(Object message, boolean sent) throws RemotingException {}
 
         @Override
-        public void close() {
-
-        }
+        public void close() {}
 
         @Override
-        public void close(int timeout) {
-
-        }
+        public void close(int timeout) {}
 
         @Override
-        public void startClose() {
-
-        }
+        public void startClose() {}
 
         @Override
         public boolean isClosed() {
             return false;
         }
     }
-
-
 }

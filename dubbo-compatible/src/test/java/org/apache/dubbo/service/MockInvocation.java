@@ -19,9 +19,12 @@ package org.apache.dubbo.service;
 import org.apache.dubbo.rpc.AttachmentsAdapter;
 import org.apache.dubbo.rpc.Invocation;
 import org.apache.dubbo.rpc.Invoker;
+import org.apache.dubbo.rpc.model.ServiceModel;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.apache.dubbo.common.constants.CommonConstants.DUBBO_VERSION_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.GROUP_KEY;
@@ -56,6 +59,11 @@ public class MockInvocation implements Invocation {
         return null;
     }
 
+    @Override
+    public String getProtocolServiceKey() {
+        return null;
+    }
+
     public String getMethodName() {
         return "echo";
     }
@@ -66,11 +74,11 @@ public class MockInvocation implements Invocation {
     }
 
     public Class<?>[] getParameterTypes() {
-        return new Class[]{String.class};
+        return new Class[] {String.class};
     }
 
     public Object[] getArguments() {
-        return new Object[]{arg0};
+        return new Object[] {arg0};
     }
 
     public Map<String, String> getAttachments() {
@@ -80,6 +88,16 @@ public class MockInvocation implements Invocation {
     @Override
     public Map<String, Object> getObjectAttachments() {
         return attachments;
+    }
+
+    @Override
+    public Map<String, Object> copyObjectAttachments() {
+        return new HashMap<>(attachments);
+    }
+
+    @Override
+    public void foreachAttachment(Consumer<Map.Entry<String, Object>> consumer) {
+        attachments.entrySet().forEach(consumer);
     }
 
     @Override
@@ -127,6 +145,14 @@ public class MockInvocation implements Invocation {
     }
 
     @Override
+    public void setServiceModel(ServiceModel serviceModel) {}
+
+    @Override
+    public ServiceModel getServiceModel() {
+        return null;
+    }
+
+    @Override
     public Map<Object, Object> getAttributes() {
         return null;
     }
@@ -151,5 +177,13 @@ public class MockInvocation implements Invocation {
             return defaultValue;
         }
         return result;
+    }
+
+    @Override
+    public void addInvokedInvoker(Invoker<?> invoker) {}
+
+    @Override
+    public List<Invoker<?>> getInvokedInvokers() {
+        return null;
     }
 }

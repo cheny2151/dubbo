@@ -22,20 +22,20 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class LFUCache<K, V> {
 
-    private Map<K, CacheNode<K, V>> map;
-    private CacheDeque<K, V>[] freqTable;
+    private final Map<K, CacheNode<K, V>> map;
+    private final CacheDeque<K, V>[] freqTable;
 
     private final int capacity;
-    private int evictionCount;
+    private final int evictionCount;
     private int curSize = 0;
 
     private final ReentrantLock lock = new ReentrantLock();
-    private static final int DEFAULT_LOAD_FACTOR = 1000;
+    private static final int DEFAULT_INITIAL_CAPACITY = 1000;
 
-    private static final float DEFAULT_EVICTION_CAPACITY = 0.75f;
+    private static final float DEFAULT_EVICTION_FACTOR = 0.75f;
 
     public LFUCache() {
-        this(DEFAULT_LOAD_FACTOR, DEFAULT_EVICTION_CAPACITY);
+        this(DEFAULT_INITIAL_CAPACITY, DEFAULT_EVICTION_FACTOR);
     }
 
     /**
@@ -46,22 +46,21 @@ public class LFUCache<K, V> {
      * @param maxCapacity    cache max capacity
      * @param evictionFactor cache proceedEviction factor
      */
+    @SuppressWarnings("unchecked")
     public LFUCache(final int maxCapacity, final float evictionFactor) {
         if (maxCapacity <= 0) {
-            throw new IllegalArgumentException("Illegal initial capacity: " +
-                    maxCapacity);
+            throw new IllegalArgumentException("Illegal initial capacity: " + maxCapacity);
         }
-        boolean factorInRange = evictionFactor <= 1 || evictionFactor < 0;
+        boolean factorInRange = evictionFactor <= 1 && evictionFactor > 0;
         if (!factorInRange || Float.isNaN(evictionFactor)) {
-            throw new IllegalArgumentException("Illegal eviction factor value:"
-                    + evictionFactor);
+            throw new IllegalArgumentException("Illegal eviction factor value:" + evictionFactor);
         }
         this.capacity = maxCapacity;
         this.evictionCount = (int) (capacity * evictionFactor);
         this.map = new HashMap<>();
         this.freqTable = new CacheDeque[capacity + 1];
         for (int i = 0; i <= capacity; i++) {
-            freqTable[i] = new CacheDeque<K, V>();
+            freqTable[i] = new CacheDeque<>();
         }
         for (int i = 0; i < capacity; i++) {
             freqTable[i].nextDeque = freqTable[i + 1];
@@ -77,21 +76,19 @@ public class LFUCache<K, V> {
         CacheNode<K, V> node;
         lock.lock();
         try {
-            if (map.containsKey(key)) {
-                node = map.get(key);
-                if (node != null) {
-                    CacheNode.withdrawNode(node);
-                }
+            node = map.get(key);
+            if (node != null) {
+                CacheNode.withdrawNode(node);
                 node.value = value;
                 freqTable[0].addLastNode(node);
                 map.put(key, node);
             } else {
-                node = freqTable[0].addLast(key, value);
-                map.put(key, node);
                 curSize++;
                 if (curSize > capacity) {
                     proceedEviction();
                 }
+                node = freqTable[0].addLast(key, value);
+                map.put(key, node);
             }
         } finally {
             lock.unlock();
@@ -171,10 +168,9 @@ public class LFUCache<K, V> {
         CacheNode<K, V> next;
         K key;
         V value;
-        CacheDeque owner;
+        CacheDeque<K, V> owner;
 
-        CacheNode() {
-        }
+        CacheNode() {}
 
         CacheNode(final K key, final V value) {
             this.key = key;
@@ -191,8 +187,7 @@ public class LFUCache<K, V> {
          * @param <V>  value
          * @return retrieved node
          */
-        static <K, V> CacheNode<K, V> withdrawNode(
-                final CacheNode<K, V> node) {
+        static <K, V> CacheNode<K, V> withdrawNode(final CacheNode<K, V> node) {
             if (node != null && node.prev != null) {
                 node.prev.next = node.next;
                 if (node.next != null) {
@@ -201,7 +196,6 @@ public class LFUCache<K, V> {
             }
             return node;
         }
-
     }
 
     /**
@@ -281,7 +275,5 @@ public class LFUCache<K, V> {
         boolean isEmpty() {
             return last.next == first;
         }
-
     }
-
 }

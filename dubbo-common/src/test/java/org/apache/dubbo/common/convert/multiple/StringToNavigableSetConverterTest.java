@@ -17,9 +17,7 @@
 package org.apache.dubbo.common.convert.multiple;
 
 import org.apache.dubbo.common.utils.CollectionUtils;
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.apache.dubbo.common.utils.JRE;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
@@ -37,6 +35,9 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.TransferQueue;
 
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
 import static java.util.Arrays.asList;
 import static org.apache.dubbo.common.extension.ExtensionLoader.getExtensionLoader;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -49,7 +50,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @since 2.7.6
  */
-public class StringToNavigableSetConverterTest {
+class StringToNavigableSetConverterTest {
 
     private MultiValueConverter converter;
 
@@ -59,7 +60,7 @@ public class StringToNavigableSetConverterTest {
     }
 
     @Test
-    public void testAccept() {
+    void testAccept() {
 
         assertFalse(converter.accept(String.class, Collection.class));
 
@@ -87,7 +88,7 @@ public class StringToNavigableSetConverterTest {
     }
 
     @Test
-    public void testConvert() {
+    void testConvert() {
 
         Set values = new TreeSet(asList(1, 2, 3));
 
@@ -106,12 +107,15 @@ public class StringToNavigableSetConverterTest {
     }
 
     @Test
-    public void testGetSourceType() {
+    void testGetSourceType() {
         assertEquals(String.class, converter.getSourceType());
     }
 
     @Test
-    public void testGetPriority() {
-        assertEquals(Integer.MAX_VALUE - 4, converter.getPriority());
+    void testGetPriority() {
+        // Since JDK21, add SequencedCollection, SequencedSet
+        assertEquals(
+                Integer.MAX_VALUE - (JRE.currentVersion().compareTo(JRE.JAVA_21) >= 0 ? 6 : 4),
+                converter.getPriority());
     }
 }

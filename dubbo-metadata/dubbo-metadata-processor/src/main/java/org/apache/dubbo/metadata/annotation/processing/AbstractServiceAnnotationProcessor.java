@@ -26,6 +26,7 @@ import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.PackageElement;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.util.Elements;
+
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -78,12 +79,10 @@ public abstract class AbstractServiceAnnotationProcessor extends AbstractProcess
         StringBuilder methodSignatureBuilder = new StringBuilder();
 
         method.getModifiers().forEach(member -> {
-            methodSignatureBuilder.append(member).append(" ");
+            methodSignatureBuilder.append(member).append(' ');
         });
 
-        methodSignatureBuilder.append(method.getReturnType())
-                .append(" ")
-                .append(method.toString());
+        methodSignatureBuilder.append(method.getReturnType()).append(' ').append(method.toString());
 
         return methodSignatureBuilder.toString();
     }

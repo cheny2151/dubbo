@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.dubbo.common.utils;
 
 /**
@@ -22,8 +21,7 @@ package org.apache.dubbo.common.utils;
  */
 public final class ArrayUtils {
 
-    private ArrayUtils() {
-    }
+    private ArrayUtils() {}
 
     /**
      * <p>Checks if the array is null or empty. <p/>
@@ -65,5 +63,21 @@ public final class ArrayUtils {
 
             return -1;
         }
+    }
+
+    /**
+     * Convert from variable arguments to array
+     *
+     * @param values variable arguments
+     * @param <T>    The class
+     * @return array
+     * @since 2.7.9
+     */
+    public static <T> T[] of(T... values) {
+        return values;
+    }
+
+    public static <T> T first(T[] data) {
+        return isEmpty(data) ? null : data[0];
     }
 }

@@ -34,7 +34,8 @@ import java.util.List;
  *
  * @since 2.7
  */
-public abstract class AbstractInterfaceBuilder<T extends AbstractInterfaceConfig, B extends AbstractInterfaceBuilder<T, B>>
+public abstract class AbstractInterfaceBuilder<
+                T extends AbstractInterfaceConfig, B extends AbstractInterfaceBuilder<T, B>>
         extends AbstractMethodBuilder<T, B> {
     /**
      * Local impl class name for the service interface
@@ -52,7 +53,7 @@ public abstract class AbstractInterfaceBuilder<T extends AbstractInterfaceConfig
     protected MonitorConfig monitor;
 
     /**
-     * Strategies for generating dynamic agents，there are two strategies can be choosed: jdk and javassist
+     * Strategies for generating dynamic agents，there are two strategies can be chosen: jdk and javassist
      */
     protected String proxy;
 
@@ -112,6 +113,7 @@ public abstract class AbstractInterfaceBuilder<T extends AbstractInterfaceConfig
      * Disconnection events
      */
     protected String ondisconnect;
+
     protected MetadataReportConfig metadataReportConfig;
 
     protected ConfigCenterConfig configCenter;

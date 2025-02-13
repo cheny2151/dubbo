@@ -19,7 +19,10 @@ package org.apache.dubbo.config.spring;
 import org.apache.dubbo.common.config.ConfigurationUtils;
 import org.apache.dubbo.common.utils.StringUtils;
 import org.apache.dubbo.config.ConfigCenterConfig;
-import org.apache.dubbo.config.spring.extension.SpringExtensionFactory;
+import org.apache.dubbo.rpc.model.ApplicationModel;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.context.ApplicationContext;
@@ -29,30 +32,34 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
 import org.springframework.core.env.PropertySource;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
- * Start from 2.7.0+, export and refer will only be executed when Spring is fully initialized, and each Config bean will get refreshed on the start of the export and refer process.
+ * Starting from 2.7.0+, export and refer will only be executed when Spring is fully initialized.
+ * <p>
+ * Each Config bean will get refreshed on the start of the exporting and referring process.
+ * <p>
  * So it's ok for this bean not to be the first Dubbo Config bean being initialized.
  * <p>
  */
-public class ConfigCenterBean extends ConfigCenterConfig implements ApplicationContextAware, DisposableBean, EnvironmentAware {
+public class ConfigCenterBean extends ConfigCenterConfig
+        implements ApplicationContextAware, DisposableBean, EnvironmentAware {
 
     private transient ApplicationContext applicationContext;
 
     private Boolean includeSpringEnv = false;
 
+    public ConfigCenterBean() {}
+
+    public ConfigCenterBean(ApplicationModel applicationModel) {
+        super(applicationModel);
+    }
+
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
-        SpringExtensionFactory.addApplicationContext(applicationContext);
     }
 
     @Override
-    public void destroy() throws Exception {
-
-    }
+    public void destroy() throws Exception {}
 
     @Override
     public void setEnvironment(Environment environment) {
@@ -60,7 +67,11 @@ public class ConfigCenterBean extends ConfigCenterConfig implements ApplicationC
             // Get PropertySource mapped to 'dubbo.properties' in Spring Environment.
             setExternalConfig(getConfigurations(getConfigFile(), environment));
             // Get PropertySource mapped to 'application.dubbo.properties' in Spring Environment.
-            setAppExternalConfig(getConfigurations(StringUtils.isNotEmpty(getAppConfigFile()) ? getAppConfigFile() : ("application." + getConfigFile()), environment));
+            setAppExternalConfig(getConfigurations(
+                    StringUtils.isNotEmpty(getAppConfigFile())
+                            ? getAppConfigFile()
+                            : ("application." + getConfigFile()),
+                    environment));
         }
     }
 
@@ -76,7 +87,8 @@ public class ConfigCenterBean extends ConfigCenterConfig implements ApplicationC
 
             if (environment instanceof ConfigurableEnvironment && externalProperties.isEmpty()) {
                 ConfigurableEnvironment configurableEnvironment = (ConfigurableEnvironment) environment;
-                PropertySource propertySource = configurableEnvironment.getPropertySources().get(key);
+                PropertySource propertySource =
+                        configurableEnvironment.getPropertySources().get(key);
                 if (propertySource != null) {
                     Object source = propertySource.getSource();
                     if (source instanceof Map) {
@@ -103,5 +115,4 @@ public class ConfigCenterBean extends ConfigCenterConfig implements ApplicationC
     public void setIncludeSpringEnv(Boolean includeSpringEnv) {
         this.includeSpringEnv = includeSpringEnv;
     }
-
 }

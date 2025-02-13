@@ -22,16 +22,14 @@ import org.apache.dubbo.common.logger.LoggerFactory;
 import org.apache.dubbo.common.utils.NetUtils;
 import org.apache.dubbo.remoting.Channel;
 import org.apache.dubbo.remoting.ChannelHandler;
-import org.apache.dubbo.remoting.transport.netty4.SslHandlerInitializer.HandshakeCompletionEvent;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.timeout.IdleStateEvent;
-
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * NettyServerHandler.
@@ -43,7 +41,7 @@ public class NettyServerHandler extends ChannelDuplexHandler {
      * the cache for alive worker channel.
      * <ip:port, dubbo channel>
      */
-    private final Map<String, Channel> channels = new ConcurrentHashMap<String, Channel>();
+    private final Map<String, Channel> channels = new ConcurrentHashMap<>();
 
     private final URL url;
 
@@ -66,29 +64,39 @@ public class NettyServerHandler extends ChannelDuplexHandler {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
+        io.netty.channel.Channel ch = ctx.channel();
+        NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
         if (channel != null) {
-            channels.put(NetUtils.toAddressString((InetSocketAddress) ctx.channel().remoteAddress()), channel);
+            channels.put(NetUtils.toAddressString(channel.getRemoteAddress()), channel);
         }
         handler.connected(channel);
 
-        if (logger.isInfoEnabled()) {
-            logger.info("The connection of " + channel.getRemoteAddress() + " -> " + channel.getLocalAddress() + " is established.");
+        if (logger.isInfoEnabled() && channel != null) {
+            logger.info(
+                    "The connection {} of {} -> {} is established.",
+                    ch,
+                    channel.getLocalAddressKey(),
+                    channel.getRemoteAddressKey());
         }
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
+        io.netty.channel.Channel ch = ctx.channel();
+        NettyChannel channel = NettyChannel.getOrAddChannel(ch, url, handler);
         try {
-            channels.remove(NetUtils.toAddressString((InetSocketAddress) ctx.channel().remoteAddress()));
+            channels.remove(NetUtils.toAddressString(channel.getRemoteAddress()));
             handler.disconnected(channel);
         } finally {
-            NettyChannel.removeChannel(ctx.channel());
+            NettyChannel.removeChannel(ch);
         }
 
         if (logger.isInfoEnabled()) {
-            logger.info("The connection of " + channel.getRemoteAddress() + " -> " + channel.getLocalAddress() + " is disconnected.");
+            logger.info(
+                    "The connection {} of {} -> {} is disconnected.",
+                    ch,
+                    channel.getRemoteAddressKey(),
+                    channel.getLocalAddressKey());
         }
     }
 
@@ -96,8 +104,9 @@ public class NettyServerHandler extends ChannelDuplexHandler {
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         handler.received(channel, msg);
+        // trigger qos handler
+        ctx.fireChannelRead(msg);
     }
-
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
@@ -122,17 +131,12 @@ public class NettyServerHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-            throws Exception {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
         NettyChannel channel = NettyChannel.getOrAddChannel(ctx.channel(), url, handler);
         try {
             handler.caught(channel, cause);
         } finally {
             NettyChannel.removeChannelIfDisconnected(ctx.channel());
         }
-    }
-
-    public void handshakeCompleted(HandshakeCompletionEvent evt) {
-        // TODO
     }
 }

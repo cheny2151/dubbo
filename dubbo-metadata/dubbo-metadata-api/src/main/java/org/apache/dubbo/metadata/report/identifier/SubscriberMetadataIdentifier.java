@@ -18,7 +18,6 @@ package org.apache.dubbo.metadata.report.identifier;
 
 import org.apache.dubbo.common.URL;
 
-import static org.apache.dubbo.common.constants.CommonConstants.APPLICATION_KEY;
 import static org.apache.dubbo.common.constants.CommonConstants.REVISION_KEY;
 
 /**
@@ -28,17 +27,15 @@ public class SubscriberMetadataIdentifier extends BaseApplicationMetadataIdentif
 
     private String revision;
 
-    public SubscriberMetadataIdentifier() {
-    }
+    public SubscriberMetadataIdentifier() {}
 
     public SubscriberMetadataIdentifier(String application, String revision) {
         this.application = application;
         this.revision = revision;
     }
 
-
     public SubscriberMetadataIdentifier(URL url) {
-        this.application = url.getParameter(APPLICATION_KEY, "");
+        this.application = url.getApplication("");
         this.revision = url.getParameter(REVISION_KEY, "");
     }
 
@@ -65,6 +62,4 @@ public class SubscriberMetadataIdentifier extends BaseApplicationMetadataIdentif
     public void setRevision(String revision) {
         this.revision = revision;
     }
-
-
 }
