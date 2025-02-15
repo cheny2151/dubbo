@@ -33,6 +33,9 @@ public class BaseServiceMetadata {
     protected volatile String group;
     private ServiceModel serviceModel;
 
+    /**
+     * group/path:version
+     */
     public static String buildServiceKey(String path, String group, String version) {
         int length = path == null ? 0 : path.length();
         length += group == null ? 0 : group.length();
