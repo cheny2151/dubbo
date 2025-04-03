@@ -42,6 +42,7 @@ public class Transporters {
         if (handlers.length == 1) {
             handler = handlers[0];
         } else {
+            // 多个handler时使用ChannelHandlerDispatcher包装
             handler = new ChannelHandlerDispatcher(handlers);
         }
         return getTransporter(url).bind(url, handler);

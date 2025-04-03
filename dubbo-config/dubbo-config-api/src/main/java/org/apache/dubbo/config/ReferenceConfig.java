@@ -380,6 +380,7 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
 
                 serviceMetadata.getAttachments().putAll(referenceParameters);
 
+                // 创建代理，生成InvokerInvocationHandler(ref即为接口代理实例)
                 ref = createProxy(referenceParameters);
 
                 serviceMetadata.setTarget(ref);
@@ -667,8 +668,10 @@ public class ReferenceConfig<T> extends ReferenceConfigBase<T> {
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
     private void createInvoker() {
+        // url示例：registry://nacos:6801/org.apache.dubbo.registry.RegistryService?application=ai-crm-service&application.version=1.0.0&dubbo=2.0.2&file.cache=false&id=org.apache.dubbo.config.RegistryConfig#0&logger=slf4j&namespace=local&namingLoadCacheAtStart=false&pid=8836&qos.enable=false&refer=application=ai-crm-service&application.version=1.0.0&dubbo=2.0.2&init=false&interface=com.shopline.ai.crm.api.AiCrmApi&logger=slf4j&methods=spendingPower,overallOverview,newOldUserTransAnalysis,countUser,searchUserGroup,searchMultiUserGroup,selectUser,featureDistribution&pid=8836&qos.enable=false&reference.filter=-validation&register.ip=172.26.59.7&release=2.7.22&revision=1.1.3&side=consumer&sticky=false&timestamp=1743501710632&version=1.0.0&registry=nacos&release=2.7.22&timestamp=1743501732222
         if (urls.size() == 1) {
             URL curUrl = urls.get(0);
+            // registry
             invoker = protocolSPI.refer(interfaceClass, curUrl);
             // registry url, mesh-enable and unloadClusterRelated is true, not need Cluster.
             if (!UrlUtils.isRegistry(curUrl) && !curUrl.getParameter(UNLOAD_CLUSTER_RELATED, false)) {

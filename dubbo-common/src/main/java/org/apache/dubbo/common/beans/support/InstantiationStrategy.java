@@ -59,6 +59,7 @@ public class InstantiationStrategy {
         List<Constructor<?>> matchedConstructors = new ArrayList<>();
         Constructor<?>[] declaredConstructors = type.getConstructors();
         for (Constructor<?> constructor : declaredConstructors) {
+            // 构造函数只允许ScopeModel参数
             if (isMatched(constructor)) {
                 matchedConstructors.add(constructor);
             }
@@ -89,6 +90,7 @@ public class InstantiationStrategy {
         Class<?>[] parameterTypes = targetConstructor.getParameterTypes();
         Object[] args = new Object[parameterTypes.length];
         for (int i = 0; i < parameterTypes.length; i++) {
+            // 获取ScopeModel参数
             args[i] = getArgumentValueForType(parameterTypes[i]);
         }
         return (T) targetConstructor.newInstance(args);

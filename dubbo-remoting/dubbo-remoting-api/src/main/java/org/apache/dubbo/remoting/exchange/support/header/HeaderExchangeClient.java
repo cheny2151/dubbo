@@ -48,7 +48,9 @@ import static org.apache.dubbo.remoting.utils.UrlUtils.getIdleTimeout;
  */
 public class HeaderExchangeClient implements ExchangeClient {
 
+    // 默认时，client为NettyClient(见org.apache.dubbo.remoting.Transporters.connect)
     private final Client client;
+    // HeaderExchangeChannel见构造函数
     private final ExchangeChannel channel;
 
     public static GlobalResourceInitializer<HashedWheelTimer> IDLE_CHECK_TIMER = new GlobalResourceInitializer<>(
@@ -106,6 +108,7 @@ public class HeaderExchangeClient implements ExchangeClient {
     @Override
     public CompletableFuture<Object> request(Object request, int timeout, ExecutorService executor)
             throws RemotingException {
+        // HeaderExchangeChannel
         return channel.request(request, timeout, executor);
     }
 

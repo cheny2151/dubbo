@@ -111,6 +111,7 @@ public class DubboProtocol extends AbstractProtocol {
     private final ExchangeHandler requestHandler;
 
     public DubboProtocol(FrameworkModel frameworkModel) {
+        // dubbo协议中，实际执行request处理逻辑的handler（见HeaderExchangeHandler.handleRequest）
         requestHandler = new ExchangeHandlerAdapter(frameworkModel) {
 
             @Override
@@ -358,6 +359,7 @@ public class DubboProtocol extends AbstractProtocol {
             }
         }
 
+        // 创建server入口(默认netty)
         openServer(url);
         optimizeSerialization(url);
 
@@ -413,6 +415,7 @@ public class DubboProtocol extends AbstractProtocol {
 
         ExchangeServer server;
         try {
+            // 以netty为例，最后创建的server为HeaderExchangeServer包装的NettyServer
             server = Exchangers.bind(url, requestHandler);
         } catch (RemotingException e) {
             throw new RpcException("Fail to start server(url: " + url + ") " + e.getMessage(), e);

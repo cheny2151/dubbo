@@ -39,6 +39,7 @@ public class HeaderExchanger implements Exchanger {
 
     @Override
     public ExchangeClient connect(URL url, ExchangeHandler handler) throws RemotingException {
+        // Transporters.connect调用SPI 默认生成NettyClient
         return new HeaderExchangeClient(
                 Transporters.connect(url, new DecodeHandler(new HeaderExchangeHandler(handler))), true);
     }
@@ -51,6 +52,7 @@ public class HeaderExchanger implements Exchanger {
             server = new HeaderExchangeServer(
                     PortUnificationExchanger.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler))));
         } else {
+            // 默认执行此分支，handler即为DubboProtocol.requestHandler，Transporters.bind生成NettyServer
             server = new HeaderExchangeServer(
                     Transporters.bind(url, new DecodeHandler(new HeaderExchangeHandler(handler))));
         }

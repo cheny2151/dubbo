@@ -60,6 +60,7 @@ public class ClassLoaderResourceLoader {
     }
 
     public static Set<URL> loadResources(String fileName, ClassLoader currentClassLoader) {
+        // classLoaderMap缓存不存在则创建缓存
         Map<ClassLoader, Map<String, Set<URL>>> classLoaderCache;
         if (classLoaderResourcesCache == null || (classLoaderCache = classLoaderResourcesCache.get()) == null) {
             synchronized (ClassLoaderResourceLoader.class) {
@@ -69,10 +70,12 @@ public class ClassLoaderResourceLoader {
                 }
             }
         }
+        // classLoader的fileName加载缓存不存在则创建缓存
         if (!classLoaderCache.containsKey(currentClassLoader)) {
             classLoaderCache.putIfAbsent(currentClassLoader, new ConcurrentHashMap<>());
         }
         Map<String, Set<URL>> urlCache = classLoaderCache.get(currentClassLoader);
+        // 若缓存不存在，则加载并写入缓存种
         if (!urlCache.containsKey(fileName)) {
             Set<URL> set = new LinkedHashSet<>();
             Enumeration<URL> urls;

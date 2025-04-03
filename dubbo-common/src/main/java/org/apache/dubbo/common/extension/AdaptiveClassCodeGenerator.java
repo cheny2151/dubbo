@@ -182,6 +182,7 @@ public class AdaptiveClassCodeGenerator {
     private String generateMethod(Method method) {
         String methodReturnType = method.getReturnType().getCanonicalName();
         String methodName = method.getName();
+        // 生成方法内容代码
         String methodContent = generateMethodContent(method);
         String methodArgs = generateMethodArguments(method);
         String methodThrows = generateMethodThrows(method);
@@ -225,11 +226,13 @@ public class AdaptiveClassCodeGenerator {
     private String generateMethodContent(Method method) {
         Adaptive adaptiveAnnotation = method.getAnnotation(Adaptive.class);
         if (adaptiveAnnotation == null) {
+            // 注解不存在则生成抛出unsupported异常的方法内容
             return generateUnsupported(method);
         }
         StringBuilder code = new StringBuilder(512);
         int urlTypeIndex = getUrlTypeIndex(method);
 
+        // 一定要获取到URL（org.apache.dubbo.common.URL），否则失败;先从method参数中找URL，不存在则从方法参数的get方法种找URL
         // found parameter in URL type
         if (urlTypeIndex != -1) {
             // Null Point check

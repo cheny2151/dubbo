@@ -46,6 +46,7 @@ public class AdaptiveExtensionInjector implements ExtensionInjector, Lifecycle {
     @Override
     public void initialize() throws IllegalStateException {
         ExtensionLoader<ExtensionInjector> loader = extensionAccessor.getExtensionLoader(ExtensionInjector.class);
+        // 通过SPI加载所有ExtensionInjector实现类
         injectors = loader.getSupportedExtensions().stream()
                 .map(loader::getExtension)
                 .collect(Collectors.collectingAndThen(Collectors.toList(), Collections::unmodifiableList));

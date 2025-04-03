@@ -304,6 +304,7 @@ public abstract class AbstractInterfaceConfig extends AbstractMethodConfig {
      * @return
      */
     protected String[] methods(Class<?> interfaceClass) {
+        // 如果是aot编译的native image则直接返回所有方法名，否则通过反射获取
         if (NativeDetector.inNativeImage()) {
             return Arrays.stream(interfaceClass.getMethods())
                     .map(Method::getName)

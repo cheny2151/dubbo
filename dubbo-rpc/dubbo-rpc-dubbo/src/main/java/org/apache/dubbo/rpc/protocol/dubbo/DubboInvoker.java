@@ -94,8 +94,10 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
         inv.setAttachment(VERSION_KEY, version);
 
         ExchangeClient currentClient;
+        // ExclusiveClientsProvider
         List<? extends ExchangeClient> exchangeClients = clientsProvider.getClients();
         if (exchangeClients.size() == 1) {
+            // 包装了NettyClient的HeaderExchangeClient(见DubboProtocol.initClient)
             currentClient = exchangeClients.get(0);
         } else {
             currentClient = exchangeClients.get(index.getAndIncrement() % exchangeClients.size());
@@ -133,6 +135,7 @@ public class DubboInvoker<T> extends AbstractInvoker<T> {
             } else {
                 request.setTwoWay(true);
                 ExecutorService executor = getCallbackExecutor(getUrl(), inv);
+                // HeaderExchangeClient#request()
                 CompletableFuture<AppResponse> appResponseFuture =
                         currentClient.request(request, timeout, executor).thenApply(AppResponse.class::cast);
                 // save for 2.6.x compatibility, for example, TraceFilter in Zipkin uses com.alibaba.xxx.FutureAdapter

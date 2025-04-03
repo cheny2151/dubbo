@@ -23,6 +23,7 @@ import org.apache.dubbo.config.context.ConfigMode;
 import org.apache.dubbo.config.support.Nested;
 import org.apache.dubbo.config.support.Parameter;
 import org.apache.dubbo.config.utils.ConfigValidationUtils;
+import org.apache.dubbo.rpc.Protocol;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.model.FrameworkModel;
 import org.apache.dubbo.rpc.model.ScopeModel;
@@ -37,6 +38,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
+import org.apache.dubbo.rpc.model.ScopeModelUtil;
 
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterEach;
@@ -1048,5 +1051,12 @@ class AbstractConfigTest {
         public void setB2(Integer b2) {
             this.b2 = b2;
         }
+    }
+
+    @Test
+    public void Test2() {
+        Protocol extension =
+                ScopeModelUtil.getExtensionLoader(Protocol.class, null).getAdaptiveExtension();
+        System.out.println(extension);
     }
 }

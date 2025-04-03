@@ -152,6 +152,7 @@ final class HeaderExchangeChannel implements ExchangeChannel {
         }
         DefaultFuture future = DefaultFuture.newFuture(channel, req, timeout, executor);
         try {
+            // NettyClient(AbstractPeer)#send
             channel.send(req);
         } catch (RemotingException e) {
             future.cancel();

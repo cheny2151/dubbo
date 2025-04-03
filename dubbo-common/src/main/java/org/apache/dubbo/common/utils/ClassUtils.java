@@ -272,6 +272,7 @@ public class ClassUtils {
         if (classLoaderToUse == null) {
             classLoaderToUse = getClassLoader();
         }
+        // 调用jdk load class
         return classLoaderToUse.loadClass(name);
     }
 

@@ -193,12 +193,14 @@ public final class ScopeBeanFactory {
     private void initializeBean(String name, Object bean) {
         checkDestroyed();
         try {
+            // 如果bean实现ExtensionAccessorAware接口，则需要调用钩子函数设置extensionAccessor
             if (bean instanceof ExtensionAccessorAware) {
                 ((ExtensionAccessorAware) bean).setExtensionAccessor(extensionAccessor);
             }
             for (ExtensionPostProcessor processor : extensionPostProcessors) {
                 processor.postProcessAfterInitialization(bean, name);
             }
+            // Initializable接口钩子函数
             if (bean instanceof Initializable) {
                 ((Initializable) bean).initialize(extensionAccessor);
             }
@@ -212,6 +214,7 @@ public final class ScopeBeanFactory {
 
     @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
     private void initializeBeanDefinitions(Class<?> type) {
+        // 遍历所有注册过的BeanDefinition，找到和Type匹配的Class，实例化并注册Bean
         for (int i = 0, size = registeredBeanDefinitions.size(); i < size; i++) {
             BeanDefinition<?> definition = registeredBeanDefinitions.get(i);
             if (definition.initialized) {
@@ -231,11 +234,13 @@ public final class ScopeBeanFactory {
                 Supplier<?> factory = definition.beanFactory;
                 if (factory == null) {
                     try {
+                        // 实例化bean
                         bean = instantiationStrategy.instantiate(beanClass);
                     } catch (Throwable e) {
                         throw new ScopeBeanException("create bean instance failed, type=" + beanClass.getName(), e);
                     }
                 } else {
+                    // 使用definition提供的beanFactory获取bean
                     initializeBean(definition.name, factory);
                     try {
                         bean = factory.get();
@@ -243,6 +248,7 @@ public final class ScopeBeanFactory {
                         throw new ScopeBeanException("create bean instance failed, type=" + beanClass.getName(), e);
                     }
                 }
+                // 注册bean
                 registerBean(definition.name, bean);
                 definition.initialized = true;
             }

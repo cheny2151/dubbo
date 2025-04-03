@@ -107,6 +107,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
         // find handler by message class.
         Object msg = req.getData();
         try {
+            // dubbo协议最终调用DubboProtocol.requestHandler.reply
             CompletionStage<Object> future = handler.reply(channel, msg);
             future.whenComplete((appResult, t) -> {
                 try {
@@ -201,6 +202,7 @@ public class HeaderExchangeHandler implements ChannelHandlerDelegate {
             if (request.isEvent()) {
                 handlerEvent(channel, request);
             } else {
+                // Dubbo的请求可以分为单向（One-Way）和双向（Two-Way）。双向请求需要等待响应，而单向不需要。
                 if (request.isTwoWay()) {
                     handleRequest(exchangeChannel, request);
                 } else {

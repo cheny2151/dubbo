@@ -167,19 +167,27 @@ public class NettyServer extends AbstractServer {
         boolean keepalive = getUrl().getParameter(KEEP_ALIVE_KEY, Boolean.FALSE);
         bootstrap
                 .group(bossGroup, workerGroup)
+                // 设置服务器端使用的底层传输通道类型
                 .channel(NettyEventLoopFactory.serverSocketChannelClass())
+                // 允许端口复用（TIME_WAIT 状态下的端口可被新连接重用）
                 .option(ChannelOption.SO_REUSEADDR, Boolean.TRUE)
+                // 禁用 Nagle 算法
                 .childOption(ChannelOption.TCP_NODELAY, Boolean.TRUE)
                 .childOption(ChannelOption.SO_KEEPALIVE, keepalive)
+                // 使用池化内存分配器
                 .childOption(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
+                // 配置子 Channel 处理链
                 .childHandler(new ChannelInitializer<SocketChannel>() {
                     @Override
                     protected void initChannel(SocketChannel ch) throws Exception {
                         int closeTimeout = UrlUtils.getCloseTimeout(getUrl());
                         NettyCodecAdapter adapter = new NettyCodecAdapter(getCodec(), getUrl(), NettyServer.this);
+                        // SSL/TLS 握手
                         ch.pipeline().addLast("negotiation", new SslServerTlsHandler(getUrl()));
                         ch.pipeline()
+                                // 添加解码器
                                 .addLast("decoder", adapter.getDecoder())
+                                // 添加编码器
                                 .addLast("encoder", adapter.getEncoder())
                                 .addLast("server-idle-handler", new IdleStateHandler(0, 0, closeTimeout, MILLISECONDS))
                                 .addLast("handler", nettyServerHandler);
